@@ -1,0 +1,7 @@
+[submodule "master"]
+	path = master
+	url = git@github.com:NickJLange/private-smart-home-ansible.git
+[submodule "private-smart-home-ansible"]
+	path = private-smart-home-ansible
+	url = git@github.com:NickJLange/private-smart-home-ansible.git
+	branch = master
