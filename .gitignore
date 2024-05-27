@@ -2,3 +2,6 @@
 __pycache__
 .DS_Store
 envfile
+hosts
+lego-data
+lego_secrets.env
