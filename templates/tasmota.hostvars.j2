@@ -1,4 +1,20 @@
 # specific commands
 specific_tasmota_commands:
+{%- if  friendly_name|length -%}
+{% set fn = friendly_name.split('、') -%}
+{% if  fn|length==1 %}
+    - command: FriendlyName1
+      value: "{{ fn[0] }}"
+{%- endif %}
+    - command: DeviceName
+      value: "{{ fn[0] }}"
+{%- for x in fn[1:] %}
+    - command: FriendlyName{{loop.index}}
+      value: "{{ x }}"
+{%- endfor %}
+{% else %}
+    - command: DeviceName
+      value: "{{ tasmota_name }}"
     - command: FriendlyName1
       value: "{{ tasmota_name }}"
+{% endif %}

@@ -1,13 +1,29 @@
-{% for mac,key in inventory.items() %}
-  {{key.room}}-{{ key.name }} ansible_ssh_host={{ key.ipAddress }} ansible_user=njl
+{% for mac,key in inventory.items() | sort(attribute='1.room') -%}
+{% if key.ipAddress|length -%}
+  {{key.room}}_{{ key.name }} ansible_ssh_host={{ key.ipAddress }} ansible_user=njl
+{%- endif %}
 {% endfor %}
 
 
 
 
-{% for room,devices in rooms.items() %}
+{% for room,devices in rooms.items() | sort(attribute='room') %}
 [{{ room }}]
-{% for device in devices %}
+{% for device in devices -%}
+{{ device }}
+{% endfor %}
+{% endfor %}
+
+{% for kind,devices in kinds.items() | sort(attribute='kind') %}
+[{{ kind }}]
+{% for device in devices -%}
+{{ device }}
+{% endfor %}
+{% endfor %}
+
+{% for building,devices in buildings.items() | sort(attribute='building') %}
+[{{ building }}]
+{% for device in devices -%}
 {{ device }}
 {% endfor %}
 {% endfor %}
