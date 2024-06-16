@@ -1,0 +1,7 @@
+#Z2Tv1
+#This sets up neo alarms for proper use via MQTT
+:TS0601,_TZE200_rjxqso4a
+EF00/020F=0001/0021,mul:2       # Battery level
+EF00/0202,co_level
+EF00/0401,co_alarm  
+EF00/0409,co_test_hush
