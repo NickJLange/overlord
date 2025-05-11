@@ -9,9 +9,7 @@ from home_network_utils import home_network_utils
 
 
 class home_network(object):
-    def __init__(
-        self, name="MyNetwork", data_file="macaddress.io-db.json", networks=None, building=None
-    ):
+    def __init__(self, name="MyNetwork", data_file="macaddress.io-db.json", networks=None, building=None):
         self.hnu = home_network_utils()
         self.hnu.load_metadata(data_file)
         self.devices = None
@@ -86,9 +84,9 @@ class home_network(object):
         )
 
         for line in arp.stdout.decode("utf-8").splitlines():
-            # '? (192.168.100.900) at (incomplete) on en0 ifscope [ethernet]',
-            # '? (192.168.100.100) at xx:xx:xx:xx:xx:xx on en0 ifscope [ethernet]',
-            # zigbee.newyork.nicklange.family (192.168.100.254) at 84:cc:a8:9e:f7:3c on en6 ifscope [ethernet]
+            # '? (192.168.YYY.XXX) at (incomplete) on en0 ifscope [ethernet]',
+            # '? (192.168.YYY.XXX) at xx:xx:xx:xx:xx:xx on enX ifscope [ethernet]',
+            # zigbee.newyork.nicklange.family (192.168.YYY.XXX) at xx:xx:xx:xx:xx:xx on enX ifscope [ethernet]
             if "incomplete" in line:
                 continue
             output = line.split(" ")
@@ -104,9 +102,7 @@ class home_network(object):
             #            else:
             #                print(f"Is Dead{ip}")
             ds = {
-                "macAddress": home_network_utils.fixMAC(
-                    output[3]
-                ),  # OSX at least returns shorter macs... annoying
+                "macAddress": home_network_utils.fixMAC(output[3]),  # OSX at least returns shorter macs... annoying
                 "ifAddress": output[5],
                 "ipAddress": ip,
                 "pingable": isAlive,

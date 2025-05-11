@@ -7,3 +7,6 @@
 ### FIXME
 
 Add support for storing either cert URL or certs in Vault
+
+
+### Cert Rotation

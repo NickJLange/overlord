@@ -17,5 +17,10 @@ iptables -A INPUT -p tcp --dport 22  -j DROP
 
 ip6tables -F INPUT
 ip6tables -A INPUT -s fd::0/8 -j ACCEPT
+ip6tables -A INPUT -s fc00::/7 -j ACCEPT #FIXME - Need our own ULA
 ip6tables -A INPUT -p udp -j ACCEPT
+ip6tables -A INPUT -s newyork.nicklange.family -j ACCEPT
+ip6tables -A INPUT -s miyagi.nicklange.family -j ACCEPT
+ip6tables -A INPUT -s wisconsin.nicklange.family -j ACCEPT
+ip6tables -A INPUT -s eva.nicklange.family -j ACCEPT
 ip6tables -A INPUT -p tcp --dport 22  -j DROP
