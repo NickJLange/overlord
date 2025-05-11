@@ -1,0 +1,7 @@
+requests
+redis
+bs4
+jinja2
+pandas
+dnspython
+hvac

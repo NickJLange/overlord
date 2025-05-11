@@ -1,0 +1,11 @@
+*.pyc
+__pycache__
+.DS_Store
+envfile
+hosts
+lego-data
+lego_secrets.env
+venv
+.venv
+.vscode
+*.bin
