@@ -9,3 +9,47 @@ venv
 .venv
 .vscode
 *.bin
+
+# Credentials, secrets and environment files
+*.env
+*.envfile
+**/environments/*.env
+**/env/
+*.secrets
+*secrets*
+*credentials*
+
+# Docker and container volumes
+**/nifi/data/
+**/nifi/logs/
+**/nifi/flowfile/
+**/nifi/content/
+**/nifi/database/
+**/nifi/provenance/
+
+# Large databases and data files
+macaddress.io-db.json
+*.firmware
+*.pkg
+
+# Ulanzi files
+ulanzi/
+
+# Data pipeline
+data_pipeline/
+
+# Network management systems
+nautobot/
+netbox/
+
+# Quansheng radio firmware
+quangsheng/
+
+# Personal scripts and automation
+update_internal_dns.sh
+youtoube_watcher/
+
+# Untracked directories
+*-dirty
+
+**/.claude/settings.local.json
