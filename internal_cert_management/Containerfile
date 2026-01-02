@@ -1,0 +1,27 @@
+# Use a multi-stage build to keep the final image small
+
+# Stage 1: Build lego from source
+FROM golang:1.21-alpine AS lego-builder
+RUN apk add --no-cache git
+RUN go install github.com/go-acme/lego/v4/cmd/lego@latest
+
+# Stage 2: Final image
+FROM alpine:latest
+
+# Install dependencies
+RUN apk add --no-cache bash curl jq vault
+
+# Copy lego binary from the builder stage
+COPY --from=lego-builder /go/bin/lego /usr/local/bin/lego
+
+# Copy project files
+COPY scripts/lego.sh /usr/local/bin/lego.sh
+COPY etc/lego_secrets.env /etc/lego/secrets.env
+COPY lego-data /lego-data
+
+# Set environment variables for Vault
+ENV VAULT_ADDR="https://vault.example.com:8200"
+ENV VAULT_TOKEN="your_vault_token"
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/lego.sh"]
