@@ -1,8 +1,8 @@
+.PHONY: all refresh-certs vault vault-force certs certs-force clean
 
-.PHONY: all refresh-certs vault vault-force certs certs-force
-all: clean
+all: refresh-certs vault certs
+	@echo "Certificate cycle complete"
 
-.PHONY: refresh-certs
 refresh-certs:
 	@echo "Running certificate refresh..."
 	scripts/lego.sh
@@ -23,6 +23,5 @@ certs-force:
 	@echo "Updating Endpoints (with --force flag)..."
 	scripts/update_endpoints.sh --force
 
-.PHONY: clean
 clean:
 	@echo "Cleaning up...Nothing!"
