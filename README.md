@@ -2,6 +2,15 @@
 
 A series of scripts for my home network to help avoid paying to other people to do the same thing...
 
+## Table of Contents
+- [Security Best Practices](#security-best-practices)
+- [Key Components](#key-components)
+
+## Key Components
+
+- **[Internal Certificate Management (`internal_cert_management`)](./internal_cert_management/README.md)**: Also known as the "Gemini Project", helps manage internal DNS and TLS certificates.
+
+
 ## Security Best Practices
 
 To maintain security when working with this repository:

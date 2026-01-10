@@ -18,8 +18,8 @@ internal_cert_management/
 ├── scripts/
 │   ├── lego.sh              # Renew certificates from Let's Encrypt
 │   ├── upload-to-vault.sh   # Upload certificates to Vault
-│   └── update_endpoints.sh  # Deploy certificates to endpoints
-└── update_internal_dns.sh    # Legacy DNS update script
+│   ├── update_endpoints.sh  # Deploy certificates to endpoints
+│   └── update_internal_dns.sh  # Legacy DNS update script
 ```
 
 ## Key Components
@@ -97,6 +97,37 @@ internal_cert_management/
          │ KV Store      │            │  Ubiquiti devices)│
          └───────────────┘            └───────────────────┘
 ```
+
+## PR Workflow
+
+### After Review Approval & Before Merge
+
+Once reviewers approve all commits, execute the final workflow ritual:
+
+```bash
+# 1. Squash all commits into single logical commit
+git rebase -i origin/main  # Or target branch
+
+# 2. Force push to PR branch
+git push origin feature/branch-name --force-with-lease
+
+# 3. Verify PR updates with squashed commit
+# (GitHub will auto-update the PR)
+
+# 4. Merge with rebase strategy
+git checkout main
+git pull origin main
+git rebase feature/branch-name
+git push origin main
+```
+
+**Key Steps:**
+- Squash commits maintain clean history
+- Use `--force-with-lease` for safety
+- Verify PR reflects squashed changes before final merge
+- Use rebase merge (not squash merge) to preserve squashed commit
+
+---
 
 ## Pre-Commit Checklist (Required Before Push)
 
