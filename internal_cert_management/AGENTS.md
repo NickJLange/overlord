@@ -114,10 +114,10 @@ git push origin feature/branch-name --force-with-lease
 # 3. Verify PR updates with squashed commit
 # (GitHub will auto-update the PR)
 
-# 4. Merge with rebase strategy
+# 4. Merge with fast-forward merge
 git checkout main
 git pull origin main
-git rebase feature/branch-name
+git merge --ff-only feature/branch-name
 git push origin main
 ```
 
@@ -125,7 +125,7 @@ git push origin main
 - Squash commits maintain clean history
 - Use `--force-with-lease` for safety
 - Verify PR reflects squashed changes before final merge
-- Use rebase merge (not squash merge) to preserve squashed commit
+- Use fast-forward merge after feature branch is squashed and up-to-date with main
 
 ---
 
