@@ -1,21 +1,27 @@
 #!/bin/bash
 
-ADMIN=dns@wafuu.design
+set -e
 
-types=(rsa2048 ec256)
-#types=(rsa2048)
+# Load configuration from .env file
+if [ -f "$(dirname "$0")/../.env" ]; then
+    source "$(dirname "$0")/../.env"
+else
+    echo "Error: .env file not found. Please copy .env.example to .env and configure."
+    exit 1
+fi
 
-subdomains_ec256=(newyork.nicklange.family wisconsin.nicklange.family miyagi.nicklange.family )
-subdomains_rsa2048=(udm.newyork.nicklange.family udm.wisconsin.nicklange.family)
+# Validate required variables
+: "${ADMIN_EMAIL:?ADMIN_EMAIL is not set}"
+: "${SUBDOMAINS_EC256:?SUBDOMAINS_EC256 is not set}"
+: "${SUBDOMAINS_RSA2048:?SUBDOMAINS_RSA2048 is not set}"
 
-#subdomains=(newyork.nicklange.family)
+# Convert space-separated strings to arrays
+read -ra subdomains_ec256 <<< "$SUBDOMAINS_EC256"
+read -ra subdomains_rsa2048 <<< "$SUBDOMAINS_RSA2048"
 
-#for type in "ec256" "rsa2048"
-#for type in "ec256" "rsa2048"
 for type in ec256
 do
     for subdomain in ${subdomains_ec256[@]}
-#    for subdomain in newyork.nicklange.family wisconsin.nicklange.family miyagi.nicklange.family tele.newyork.nicklange.family;
     do
         mkdir -p "../lego-data/$subdomain/$type/"
         echo "Renewing Certs for $subdomain/$type"
@@ -26,10 +32,10 @@ do
         --env-file ./etc/lego_secrets.env \
         --read-only \
         -it goacme/lego \
-        --email $ADMIN \
+        --email "$ADMIN_EMAIL" \
         --key-type=$type \
-        --dns porkbun \
-        --dns.resolvers 9.9.9.9:53 \
+        --dns "$LEGO_DNS_PROVIDER" \
+        --dns.resolvers "$LEGO_DNS_RESOLVERS" \
         --domains '*.'$subdomain --domains $subdomain \
         renew
     done
@@ -48,10 +54,10 @@ do
         --env-file ./etc/lego_secrets.env \
         --read-only \
         -it goacme/lego \
-        --email $ADMIN \
+        --email "$ADMIN_EMAIL" \
         --key-type=$type \
-        --dns porkbun \
-        --dns.resolvers 9.9.9.9:53 \
+        --dns "$LEGO_DNS_PROVIDER" \
+        --dns.resolvers "$LEGO_DNS_RESOLVERS" \
         --domains $subdomain \
         renew
     done

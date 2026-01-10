@@ -1,5 +1,5 @@
 
-.PHONY: all refresh-certs vault certs
+.PHONY: all refresh-certs vault vault-force certs certs-force
 all: clean
 
 .PHONY: refresh-certs
@@ -9,12 +9,20 @@ refresh-certs:
 
 vault:
 	@echo "Uploading certificates to Vault..."
-	scripts/upload_vault.sh
+	scripts/upload-to-vault.sh
+
+vault-force:
+	@echo "Uploading certificates to Vault (with --force flag)..."
+	scripts/upload-to-vault.sh --force
 
 certs:
 	@echo "Updating Endpoints..."
 	scripts/update_endpoints.sh
 
+certs-force:
+	@echo "Updating Endpoints (with --force flag)..."
+	scripts/update_endpoints.sh --force
+
 .PHONY: clean
 clean:
-	@echo "Cleaning up...Nothng!"
+	@echo "Cleaning up...Nothing!"

@@ -1,49 +1,81 @@
 #!/bin/bash
 
-# Script to upload certificates to Vault
-# Usage: ./upload-to-vault.sh <hostlist> <subdomain> [vault_cert_algo]
+# Script to update certificates on endpoints from Vault
+# Usage: ./update_endpoints.sh [--force]
 #
 # Parameters:
-#   hostlist: The target host list (e.g., udm.newyork.nicklange.family)
-#   subdomain: The subdomain (e.g., newyork.nicklange.family)
-#   vault_cert_algo: Optional certificate algorithm (e.g., rsa2048)
+#   --force: Skip SSL certificate validation (for self-signed certs)
 
 set -e
 
+# Load configuration from .env file
+if [ -f "$(dirname "$0")/../.env" ]; then
+    source "$(dirname "$0")/../.env"
+else
+    echo "Error: .env file not found. Please copy .env.example to .env and configure."
+    exit 1
+fi
 
+# Validate required variables
+: "${HOSTLIST_ENDPOINTS:?HOSTLIST_ENDPOINTS is not set}"
+: "${SUBDOMAINS_ENDPOINTS:?SUBDOMAINS_ENDPOINTS is not set}"
+: "${CERT_TYPES_ENDPOINTS:?CERT_TYPES_ENDPOINTS is not set}"
+: "${DOMAIN_SUFFIX:?DOMAIN_SUFFIX is not set}"
+: "${ANSIBLE_PATH:?ANSIBLE_PATH is not set}"
+: "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
 
-HOSTLIST=udm.newyork.nicklange.family
+# Parse command line arguments
+FORCE_SKIP_VALIDATION=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force)
+            FORCE_SKIP_VALIDATION=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--force]"
+            echo "  --force: Skip SSL certificate validation"
+            exit 1
+            ;;
+    esac
+done
 
-types=(ec256)
-#types=(rsa2048)
-
-subdomains=(wisconsin miyagi newyork)
-
-# Path to ansible directory
-ANSIBLE_PATH="/Users/njl/dev/src/overlord/ansible"
+# Convert space-separated strings to arrays
+read -ra types <<< "$CERT_TYPES_ENDPOINTS"
+read -ra subdomains <<< "$SUBDOMAINS_ENDPOINTS"
 
 if [ ! -d "$ANSIBLE_PATH" ]; then
     echo "Error: Ansible path not found: $ANSIBLE_PATH"
     exit 1
 fi
 
-echo "Reading from Vault to push to $HOSTLIST ($subdomains)..."
+echo "Reading from Vault to push to endpoints..."
+if [ "$FORCE_SKIP_VALIDATION" = true ]; then
+    echo "⚠️  Certificate validation is DISABLED (--force)"
+fi
 
 cd "$ANSIBLE_PATH"
+
+# Build extra vars for ansible
+EXTRA_VARS=""
+if [ "$FORCE_SKIP_VALIDATION" = true ]; then
+    EXTRA_VARS="-e force_skip_validation=true"
+fi
 
 for subdomain in ${subdomains[@]}
 do
     for type in ${types[@]}
-    do    # Always run the default playbook (without vault_cert_algo)
-        echo "Running default vault update"
-        ansible-playbook \
-            -e hostlist="$subdomain"_linux \
-            -e subdomain="$subdomain".nicklange.family \
-            -i non_tasmota_hosts.inventory \
-            playbooks/internal_certs_update_endpoints.yml
-    done
-    if [ "$subdomain" != "miyagi" ]; then
-    	ansible-playbook  -e hostlist=udm.$subdomain.nicklange.family -e subdomain=$subdomain.nicklange.family   playbooks/ubiquti-configure-certs.yml
-    fi
+    do    # Deploy certificate for endpoint
+         ansible-playbook \
+             $EXTRA_VARS \
+             -e hostlist="${subdomain}_linux" \
+             -e subdomain="${subdomain}.${DOMAIN_SUFFIX}" \
+             -i "$ANSIBLE_INVENTORY" \
+             playbooks/internal_certs_update_endpoints.yml
+     done
+     if [ "$subdomain" != "miyagi" ]; then
+     	ansible-playbook $EXTRA_VARS -e hostlist="udm.${subdomain}.${DOMAIN_SUFFIX}" -e subdomain="${subdomain}.${DOMAIN_SUFFIX}" playbooks/ubiquiti-configure-certs.yml
+     fi
 done
-echo "Push completed for $HOSTLIST ($subdomains)"
+echo "Push completed for endpoints"

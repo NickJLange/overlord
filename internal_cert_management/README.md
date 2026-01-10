@@ -6,18 +6,11 @@ This subproject manages the renewal and deployment of internal TLS certificates 
 
 The process of renewing and deploying certificates is as follows:
 
-https://sven.stormbind.net/blog/posts/misc_nftp_masquarading/
-Add the iptables rule for 10.0.0.0/8 -> eth0 until we can find something smoother.
-
 1.  **Renew Certificates:** The `scripts/lego.sh` script is executed to renew wildcard TLS certificates from Let's Encrypt using the DNS-01 challenge. This script utilizes Lego to automate the certificate acquisition process.
 
 2.  **Upload to Vault:** After the certificates are renewed, the `private-smart-home-ansible/playbooks/internal_certs_update_vault.yml` Ansible playbook is run. This playbook uploads the newly obtained certificates to a Vault KV store for secure storage.
 
-`ansible-playbook -e subdomain=miyagi.nicklange.family -e hostlist=terraDelta -i non_tasmota_hosts.inventory playbooks/internal_certs_update_vault.yml`
-
 3.  **Push to Endpoints:** Finally, the `private-smart-home-ansible/playbooks/internal_certs_update_endpoints.yml` Ansible playbook is executed. This playbook retrieves the certificates from Vault and pushes them to the designated endpoints, ensuring that all services are using the latest TLS certificates.
-
-`ansible-playbook -e subdomain=newyork.nicklange.family -e hostlist=newyork_linux playbooks/internal_certs_update_endpoints.yml`
 
 ## Key Components
 
@@ -27,22 +20,30 @@ Add the iptables rule for 10.0.0.0/8 -> eth0 until we can find something smoothe
 
 ## Configuration
 
-The `scripts/lego.sh` script requires a `.env` file in the `internal_dns_management` directory with the following variables:
+All scripts require a `.env` file in the root directory. Copy `.env.example` to `.env` and update with your environment-specific values:
 
-*   `LEGO_EMAIL`: The email address to use for Let's Encrypt.
-*   `LEGO_DNS_PROVIDER`: The DNS provider to use for the DNS-01 challenge.
-*   `VAULT_ADDR`: The address of the Vault server.
-*   `VAULT_TOKEN`: The Vault token to use for authentication.
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
 
-The script also uses a `domains.txt` file in the `internal_dns_management/etc` directory to get the list of domains to renew.
+Required environment variables:
 
-## Playbook Variables
+*   **Lego:** `ADMIN_EMAIL`, `LEGO_DNS_PROVIDER`, `LEGO_DNS_RESOLVERS`
+*   **Subdomains:** `SUBDOMAINS_EC256`, `SUBDOMAINS_RSA2048`, `SUBDOMAINS_VAULT`, `SUBDOMAINS_ENDPOINTS`
+*   **Hosts:** `HOSTLIST_VAULT`, `HOSTLIST_ENDPOINTS`
+*   **Ansible:** `ANSIBLE_PATH`, `ANSIBLE_INVENTORY`
+*   **Cert Types:** `CERT_TYPES_VAULT`, `CERT_TYPES_ENDPOINTS`
 
-The Ansible playbooks use the following extra variables:
-
-*   `subdomain`: The subdomain for which the certificate is being deployed.
-*   `hostlist`: A comma-separated list of hosts to which the certificate should be deployed.
+See `.env.example` for detailed descriptions of each variable.
 
 ## Usage
 
-To initiate the certificate renewal and deployment process, execute the scripts and playbooks in the order described in the Workflow section. Ensure that Lego, Vault, and Ansible are properly configured and accessible from the environment where the scripts are being run.
+To initiate the certificate renewal and deployment process:
+
+1. Configure `.env` with your environment-specific values
+2. Execute `make refresh-certs` to renew certificates
+3. Execute `make vault` to upload certificates to Vault
+4. Execute `make certs` to deploy certificates to endpoints
+
+See `Makefile` for additional targets and options.

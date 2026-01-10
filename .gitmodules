@@ -5,6 +5,6 @@
 	path = private-smart-home-ansible
 	url = git@github.com:NickJLange/private-smart-home-ansible.git
 	branch = master
-[submodule "dns_admin"]
+[submodule "network_kill_switch"]
 	path = network_kill_switch
 	url = git@github.com:NickJLange/dns_admin.git
