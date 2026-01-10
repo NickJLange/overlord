@@ -1,0 +1,11 @@
+# Configuration files
+.env
+.env.local
+.env.*.local
+
+# Generated data
+lego-data/
+*.swp
+*.swo
+*~
+.DS_Store
