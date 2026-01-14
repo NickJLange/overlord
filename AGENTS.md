@@ -16,16 +16,17 @@ This file provides context and guidance for AI Agents working within the **Overl
     *   **Purpose:** Automates the renewal and deployment of internal TLS certificates using Let's Encrypt (DNS-01 challenge), HashiCorp Vault, and Ansible.
     *   **Key Files:**
         *   `scripts/lego.sh`: Renews certificates using Lego.
-        *   `GEMINI.md`: Specific documentation for this subsystem.
-        *   `generated_vars.yml`: Ansible variables for certificate deployment.
+        *   `scripts/upload-to-vault.sh`: Uploads certificates to Vault.
+        *   `README.md`: Documentation for this subsystem.
 
 ## Repository Structure
 
 *   **`internal_cert_management/`**: Subproject for DNS and TLS certificate handling.
 *   **`bin/`**: General utility scripts.
 *   **`data/`** & **`data_pipeline/`**: Data storage and processing scripts.
-*   **`network_kill_switch/`**: Emergency network controls.
-*   **`monitor/`** & **`tcp_monitor/`**: Network monitoring tools.
+*   **`network_kill_switch/`**: Emergency network controls (git submodule).
+*   **`private-smart-home-ansible/`**: Ansible roles for smart home devices (git submodule).
+*   **`bpf_tcp_monitor/`**: BPF-based network monitoring tools.
 
 ## Active Tasks / Jira Context
 
