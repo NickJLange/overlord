@@ -90,7 +90,7 @@ do
         continue
     fi
 
-    cd "$ANSIBLE_PATH"
+    cd "$ANSIBLE_PATH" || exit 1
     ansible-playbook \
         $EXTRA_VARS \
         -e hostlist="udm.${subdomain}.${DOMAIN_SUFFIX}" \

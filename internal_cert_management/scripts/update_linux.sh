@@ -73,7 +73,7 @@ FAILED_RUNS=()
 
 for subdomain in ${subdomains[@]}
 do
-    cd "$ANSIBLE_PATH"
+    cd "$ANSIBLE_PATH" || exit 1
     for type in ${types[@]}
     do
         ansible-playbook \

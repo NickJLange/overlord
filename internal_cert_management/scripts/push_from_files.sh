@@ -52,7 +52,7 @@ if [ -z "$cert_source_dir" ]; then
     exit 1
 fi
 
-cd "$ANSIBLE_PATH"
+cd "$ANSIBLE_PATH" || exit 1
 ansible-playbook \
     $EXTRA_VARS \
     -e subdomain="$SUBDOMAIN_VAULT_HOST" \

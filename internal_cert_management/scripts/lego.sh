@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -e
-set -x
 
 # Load configuration from .env file
 if [ -f "$(dirname "$0")/../.env" ]; then
@@ -35,7 +34,6 @@ do
         --env-file ./etc/lego_secrets.env \
         --read-only \
         goacme/lego \
-	run \
         --email "$ADMIN_EMAIL" \
         --key-type=$type \
         --dns "$LEGO_DNS_PROVIDER" \
@@ -58,7 +56,6 @@ do
         --env-file ./etc/lego_secrets.env \
         --read-only \
         goacme/lego \
-	run \
         --email "$ADMIN_EMAIL" \
         --key-type=$type \
         --dns "$LEGO_DNS_PROVIDER" \
