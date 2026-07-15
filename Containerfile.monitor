@@ -18,7 +18,8 @@ RUN uv venv /opt/venv && \
 # Copy application files
 COPY bin/ /app/bin/
 COPY lib/ /app/lib/
-COPY tasmota.inventory /app/
+COPY private-smart-home-ansible/tasmota.mac_mapping.inventory /app/tasmota.inventory
+# macaddress.io-db.json is gitignored — download from macaddress.io before building
 COPY macaddress.io-db.json /app/
 COPY private-smart-home-ansible/ /app/private-smart-home-ansible/
 
