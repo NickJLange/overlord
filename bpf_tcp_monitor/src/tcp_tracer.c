@@ -12,9 +12,9 @@
 #include <bpf/bpf.h>
 #include "tcp_tracer.skel.h"
 
-#define SYSFS_PATH "/sys/tcp_tracer"
-#define EVENTS_FILE SYSFS_PATH "/events"
-#define STATS_FILE SYSFS_PATH "/stats"
+#define RUN_DIR "/var/run/tcp_tracer"
+#define EVENTS_FILE RUN_DIR "/events"
+#define STATS_FILE RUN_DIR "/stats"
 #define MAX_EVENTS 1000
 
 struct tcp_event {
@@ -29,7 +29,7 @@ struct tcp_event {
 };
 
 static struct tcp_tracer_bpf *skel;
-static int running = 1;
+static volatile sig_atomic_t running = 1;
 static struct tcp_event events_buffer[MAX_EVENTS];
 static int events_count = 0;
 static __u64 total_events = 0;
@@ -46,9 +46,9 @@ static int create_sysfs_interface(void)
     int ret;
     
     // Create main directory
-    ret = mkdir(SYSFS_PATH, 0755);
+    ret = mkdir(RUN_DIR, 0755);
     if (ret < 0 && errno != EEXIST) {
-        fprintf(stderr, "Failed to create %s: %s\n", SYSFS_PATH, strerror(errno));
+        fprintf(stderr, "Failed to create %s: %s\n", RUN_DIR, strerror(errno));
         return -1;
     }
 
@@ -84,16 +84,18 @@ static void update_sysfs_events(void)
     
     for (int i = 0; i < events_count; i++) {
         struct tcp_event *e = &events_buffer[i];
-        struct in_addr src_addr = { .s_addr = e->src_addr };
-        struct in_addr dst_addr = { .s_addr = e->dst_addr };
-        
+        char src_str[INET_ADDRSTRLEN];
+        char dst_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &e->src_addr, src_str, sizeof(src_str));
+        inet_ntop(AF_INET, &e->dst_addr, dst_str, sizeof(dst_str));
+
         fprintf(fp, "%llu,%u,%s,%s,%u,%s,%u,%u\n",
                 e->timestamp,
                 e->pid,
                 e->event_type == 0 ? "CONNECT" : "CLOSE",
-                inet_ntoa(src_addr),
+                src_str,
                 e->src_port,
-                inet_ntoa(dst_addr),
+                dst_str,
                 e->dst_port,
                 e->proto);
     }
@@ -194,6 +196,7 @@ int main(int argc, char **argv)
     }
 
     printf("TCP tracer started. Events will be written to %s\n", EVENTS_FILE);
+    printf("Run directory: %s\n", RUN_DIR);
     printf("Statistics available at %s\n", STATS_FILE);
     printf("Press Ctrl-C to stop.\n");
 
@@ -218,10 +221,10 @@ cleanup:
     ring_buffer__free(rb);
     tcp_tracer_bpf__destroy(skel);
     
-    // Cleanup sysfs files
+    // Cleanup run directory
     unlink(EVENTS_FILE);
     unlink(STATS_FILE);
-    rmdir(SYSFS_PATH);
+    rmdir(RUN_DIR);
     
     return err < 0 ? -err : 0;
 }

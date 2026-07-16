@@ -26,7 +26,7 @@ struct {
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(max_entries, 10240);
-    __type(key, __u32);
+    __type(key, __u64);
     __type(value, struct tcp_event);
 } tcp_connections SEC(".maps");
 
@@ -41,8 +41,10 @@ int BPF_KPROBE(trace_tcp_v4_connect, struct sock *sk)
     if (!event)
         return 0;
 
+    __builtin_memset(event, 0, sizeof(*event));
+
     inet = (struct inet_sock *)sk;
-    
+
     event->pid = pid;
     event->src_addr = BPF_CORE_READ(inet, inet_saddr);
     event->dst_addr = BPF_CORE_READ(inet, inet_daddr);
@@ -53,7 +55,7 @@ int BPF_KPROBE(trace_tcp_v4_connect, struct sock *sk)
     event->timestamp = bpf_ktime_get_ns();
 
     // Store connection for later close tracking
-    __u32 sk_ptr = (__u32)(unsigned long)sk;
+    __u64 sk_ptr = (__u64)(unsigned long)sk;
     bpf_map_update_elem(&tcp_connections, &sk_ptr, event, BPF_ANY);
 
     bpf_ringbuf_submit(event, 0);
