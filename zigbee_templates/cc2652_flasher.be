@@ -134,7 +134,7 @@ class cc2652_flasher
     self.ser.write(bytes("5555"))          # trigger auto baudrate detector
     var ret = self.recv_raw(100)
     if self.debug print(f"reset_bsl ret='{ret}'") end
-    if ret[-1] != 0xCC
+    if size(ret) == 0 || ret[-1] != 0xCC
       raise "protocol_error", f"received '{ret}'"
     end
   end
@@ -191,6 +191,7 @@ class cc2652_flasher
     while size(b) > 0 && (b[0] == 0 || b[0] == 0xCC)
       b = b[1..]
     end
+    if size(b) == 0    raise "serial_error", "buffer too small" end
 
     # check buffer
     var sz = b[0]
@@ -248,6 +249,7 @@ class cc2652_flasher
 
   def cmd_memory_read(addr, len)
     if len > 128      raise "value_error", "len is bigger than 128" end
+    if len % 4 != 0   raise "value_error", "len must be a multiple of 4" end
     var b = bytes("2A")
     b.add(addr, -4)
     b.add(1)
@@ -350,17 +352,20 @@ class cc2652_flasher
   end
 
   # dump the flash into a bin file
+  # len must be a multiple of 4; reads in 32-byte chunks, with a smaller final chunk if needed
   def flash_dump_to_file(filename, addr, len)
+    if len % 4 != 0   raise "value_error", "len must be a multiple of 4" end
     var offset = addr
     var f
-    
+
     try
-      f = open(filename,"w")
+      f = open(filename,"wb")
       while len > 0
-        var b = self.cmd_memory_read(offset, 32)
+        var chunk = (len >= 32) ? 32 : len
+        var b = self.cmd_memory_read(offset, chunk)
         f.write(b)
-        offset += 32
-        len -= 32
+        offset += chunk
+        len -= chunk
         tasmota.yield()
       end
     except .. as e, m

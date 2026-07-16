@@ -93,13 +93,9 @@ class intelhex
         defer = 10
       end
       var line = readline(self_f)   # self.f.readline()
-      if line[-1] == '\n'   line = line[0..-2]  end
-      if line[-1] == '\r'   line = line[0..-2]  end
-      
-      # line = string.tr(line, '\r', '')
-      # line = string.tr(line, '\n', '')
-      # print(line)
       if line == ""   raise "value_error", "unexpected end of file" end
+      if size(line) > 0 && line[-1] == '\n'   line = line[0..-2]  end
+      if size(line) > 0 && line[-1] == '\r'   line = line[0..-2]  end
       if line[0] != ":"   continue end    # ignore empty line or not starting with ':'
       b = b_fromhex(b, line, 1)           # b.fromhex(line, 1)      # convert to bytes, avoid allocating a new object
       var sz = b[0]
@@ -114,6 +110,14 @@ class intelhex
       # 04: high address
       if record_type != 0 && record_type != 1 && record_type != 2 && record_type != 4
         raise "value_error", f"unsupported record_type: {record_type} {line=}"
+      end
+
+      # validate fixed-format record lengths
+      if record_type == 1 && sz != 0
+        raise "value_error", f"EOF record (type 01) must have sz=0, got {sz=}"
+      end
+      if (record_type == 2 || record_type == 4) && sz != 2
+        raise "value_error", f"extended address record (type {record_type}) must have sz=2, got {sz=}"
       end
 
       offset_low = b_get(b, 1, -2)                    # b.get(1,-2)

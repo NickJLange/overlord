@@ -1,7 +1,7 @@
 
 #################################################################################
 #
-# class `sonoff_zb_pro_flasher`
+# class `tubezb_cc2652_flasher`
 #
 #################################################################################
 
@@ -18,6 +18,7 @@ class tubezb_cc2652_flasher
   var file_validated    # was the file already validated. It cannot be flashed if not previously parsed and validated
   var file_hex          # intelhex object
   var flasher           # low-level flasher object (cc2652_flasher instance)
+  var _check_bytes      # total data bytes seen during check(), to guard against partial HEX
 
   def init()
     self.file_checked = false
@@ -39,6 +40,8 @@ class tubezb_cc2652_flasher
   # parse it completely once, and verify some values
   #################################################################################
   def check()
+    self.file_checked = false
+    self.file_validated = false
     self.file_hex.parse(/ -> self._check_pre(),
                         / address, len, data, offset -> self._check_cb(address, len, data, offset),
                         / -> self._check_post()
@@ -118,6 +121,7 @@ class tubezb_cc2652_flasher
 
   # start verification (log only)
   def _check_pre()
+    self._check_bytes = 0
     print("FLH: Starting verification of HEX file")
     # tasmota.log("FLH: Starting verification of HEX file", 2)
   end
@@ -132,17 +136,23 @@ class tubezb_cc2652_flasher
 
     # print(format("> addr=0x%06X sz=0x%02X data=%s", addr, sz, data[offset..offset+sz-1]))
     var CCFG = self.CCFG_address
-    if addr <= CCFG && addr+sz > CCFG+4
+    self._check_bytes += sz
+    if addr <= CCFG && addr+sz >= CCFG+4
       # we have CCFG in the buffer
       var ccfg_bytes = data.get(4 + CCFG - addr, 4)
 
       if ccfg_bytes != self.CCFG_reference
-        raise "value_error", format("incorrect CCFG, BSL is not set to DIO_8 LOW (0x%08X expected 0x%08X)", ccfg_bytes, self.CCFG_reference) end
+        raise "value_error", format("incorrect CCFG, BSL is not set to DIO_15 LOW (0x%08X expected 0x%08X)", ccfg_bytes, self.CCFG_reference) end
       self.file_validated = true    # if we are here, it means that the file looks correct
     end
   end
 
   def _check_post()
+    # Require at least 128KB of firmware data to catch truncated/partial HEX files
+    # that contain only CCFG and would erase a working coordinator with no app firmware
+    if self._check_bytes < 0x20000
+      raise "value_error", format("firmware too small: %i bytes (expected >= 128KB)", self._check_bytes)
+    end
     print("FLH: Verification of HEX file OK")
     # tasmota.log("FLH: Verification of HEX file OK", 2)
     self.file_checked = true
@@ -156,8 +166,8 @@ return tubezb_cc2652_flasher()
 #-
 # Flash local firmware
 
-import sonoff_zb_pro_flasher as cc
-cc.load("SonoffZBPro_coord_20220219.hex")
+import tubezb_cc2652_flasher as cc
+cc.load("TubeZB_coord_firmware.hex")
 cc.check()
 cc.flash()
 
@@ -166,7 +176,7 @@ cc.flash()
 #-
 # Dump local firmware
 
-import sonoff_zb_pro_flasher as cc
-cc.dump_to_file("SonoffZBPro_dump.bin")
+import tubezb_cc2652_flasher as cc
+cc.dump_to_file("TubeZB_dump.bin")
 
 -#
