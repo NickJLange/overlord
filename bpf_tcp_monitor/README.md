@@ -1,12 +1,12 @@
 # TCP Tracer BPF Tool
 
-A high-performance BPF-based TCP connection tracer that logs all TCP open/close events and exposes the 5-tuple (src_ip, src_port, dst_ip, dst_port, protocol) via sysfs for minimal performance overhead.
+A high-performance BPF-based TCP connection tracer that logs all TCP open/close events and exposes the 5-tuple (src_ip, src_port, dst_ip, dst_port, protocol) via `/var/run/tcp_tracer/` for minimal performance overhead.
 
 ## Features
 
 - **Low Overhead**: Uses eBPF for kernel-space tracing with minimal performance impact
 - **Complete 5-Tuple Logging**: Captures source IP, source port, destination IP, destination port, and protocol
-- **Sysfs Interface**: Exposes events and statistics through `/sys/tcp_tracer/` for easy monitoring
+- **Runtime Interface**: Exposes events and statistics through `/var/run/tcp_tracer/` for easy monitoring
 - **Event Types**: Tracks both TCP connection establishment (CONNECT) and termination (CLOSE)
 - **Process Tracking**: Associates connections with process IDs
 - **Ring Buffer**: Efficient event delivery from kernel to userspace
@@ -16,11 +16,11 @@ A high-performance BPF-based TCP connection tracer that logs all TCP open/close 
 The tool consists of two main components:
 
 1. **BPF Program** (`tcp_tracer.bpf.c`): Kernel-space component that hooks into TCP connect/close syscalls
-2. **Userspace Loader** (`tcp_tracer.c`): Loads the BPF program and manages the sysfs interface
+2. **Userspace Loader** (`tcp_tracer.c`): Loads the BPF program and manages the `/var/run/tcp_tracer/` interface
 
 ## Output Format
 
-### Events File (`/sys/tcp_tracer/events`)
+### Events File (`/var/run/tcp_tracer/events`)
 ```
 # TCP Events (5-tuple format)
 # Format: timestamp,pid,event_type,src_ip,src_port,dst_ip,dst_port,proto
@@ -28,7 +28,7 @@ The tool consists of two main components:
 1640995201000000000,1234,CLOSE,192.168.1.100,45678,93.184.216.34,80,6
 ```
 
-### Statistics File (`/sys/tcp_tracer/stats`)
+### Statistics File (`/var/run/tcp_tracer/stats`)
 ```
 total_events: 1024
 connect_events: 512
@@ -38,7 +38,7 @@ buffered_events: 100
 
 ## Requirements
 
-- Linux kernel with BPF support (>= 4.15)
+- Linux kernel >= 5.8 (BPF ring buffers require 5.8+; kprobe support requires 4.15+ but ring buffers are the binding constraint)
 - clang compiler
 - bpftool utility
 - libbpf development package
@@ -101,10 +101,10 @@ While the tool is running, monitor events in real-time:
 
 ```bash
 # Watch events
-sudo tail -f /sys/tcp_tracer/events
+sudo tail -f /var/run/tcp_tracer/events
 
 # Check statistics
-cat /sys/tcp_tracer/stats
+cat /var/run/tcp_tracer/stats
 ```
 
 ## Performance Considerations
@@ -136,9 +136,14 @@ Key parameters that can be modified in the source:
 - Minimal attack surface through sysfs read-only interface
 - No sensitive data exposure (only network 5-tuples and PIDs)
 
+## Known Limitations
+
+- **Pre-connect 5-tuple**: CONNECT events are captured at `kprobe/tcp_v4_connect` entry, before the kernel assigns a source port. Source port may be 0 for outbound connections; use CLOSE events for the complete 5-tuple.
+- **IPv4 only**: The BPF program reads `inet_saddr`/`inet_daddr` (IPv4). IPv6 connections are not traced.
+
 ## Cleanup
 
-Stop the tool with Ctrl+C. The sysfs files are automatically cleaned up on exit.
+Stop the tool with Ctrl+C. The `/var/run/tcp_tracer/` files are automatically cleaned up on exit.
 
 To remove installed binary:
 ```bash

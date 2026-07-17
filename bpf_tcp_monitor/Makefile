@@ -16,9 +16,19 @@ SKEL_H = $(BUILD_DIR)/tcp_tracer.skel.h
 BPF_OBJ = $(BUILD_DIR)/tcp_tracer.bpf.o
 TARGET = $(BUILD_DIR)/tcp_tracer
 
+# Derive target arch for BPF_KPROBE register layout
+UNAME_ARCH := $(shell uname -m)
+ifeq ($(UNAME_ARCH),x86_64)
+  TARGET_ARCH := x86
+else ifeq ($(UNAME_ARCH),aarch64)
+  TARGET_ARCH := arm64
+else
+  TARGET_ARCH := $(UNAME_ARCH)
+endif
+
 # Compiler flags
 CFLAGS = -O2 -g -Wall -Werror
-BPF_CFLAGS = -O2 -g -target bpf -D__TARGET_ARCH_x86_64
+BPF_CFLAGS = -O2 -g -target bpf -D__TARGET_ARCH_$(TARGET_ARCH)
 
 # Libraries
 LIBS = -lbpf -lelf -lz

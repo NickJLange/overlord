@@ -5,16 +5,22 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 
+   echo "This script must be run as root"
    exit 1
 fi
 
 echo "Setting up NFTables TCP logging..."
 
-# Load the nftables rules
-nft -f nftables_tcp_logging.nft
+# Remove existing tables before reload so reruns are idempotent
+nft delete table inet tcp_logger 2>/dev/null || true
+nft delete table inet tcp_service_logger 2>/dev/null || true
+
+# Load the nftables rules using script-relative path
+nft -f "$SCRIPT_DIR/nftables_tcp_logging.nft"
 
 echo "NFTables rules loaded successfully"
 
@@ -72,9 +78,9 @@ tail -f "$LOGFILE" | while read line; do
         uid=$(echo "$line" | grep -o 'UID=[0-9]*' | cut -d= -f2)
         
         # Extract IP addresses and ports
-        src_ip=$(echo "$line" | grep -o 'SRC=[0-9.]*' | cut -d= -f2)
+        src_ip=$(echo "$line" | grep -oP 'SRC=\K[^ ]+')
         src_port=$(echo "$line" | grep -o 'SPT=[0-9]*' | cut -d= -f2)
-        dst_ip=$(echo "$line" | grep -o 'DST=[0-9.]*' | cut -d= -f2)
+        dst_ip=$(echo "$line" | grep -oP 'DST=\K[^ ]+')
         dst_port=$(echo "$line" | grep -o 'DPT=[0-9]*' | cut -d= -f2)
         
         # Protocol is always TCP (6)
@@ -96,6 +102,17 @@ cat > /usr/local/bin/tcp_monitor.sh << 'EOF'
 
 echo "TCP Connection Monitor - Press Ctrl+C to stop"
 echo "==================================================="
+
+# Initialize log files so tail -f doesn't exit immediately if they don't exist yet
+touch /var/log/tcp_connections.log /var/log/tcp_owners.log /var/log/tcp_services.log
+
+# Kill all background jobs on Ctrl+C
+cleanup() {
+    kill $(jobs -p) 2>/dev/null
+    wait 2>/dev/null
+    exit 0
+}
+trap cleanup INT TERM
 
 # Monitor different log streams
 {
