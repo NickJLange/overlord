@@ -20,6 +20,7 @@ class tubezb_cc2652_flasher
   var flasher           # low-level flasher object (cc2652_flasher instance)
   var _check_min_addr   # lowest address seen during check() — used to guard against partial HEX
   var _check_max_addr   # highest address+size seen during check()
+  var _check_bytes      # total data bytes seen during check()
 
   def init()
     self.file_checked = false
@@ -124,6 +125,7 @@ class tubezb_cc2652_flasher
   def _check_pre()
     self._check_min_addr = 0xFFFFFF
     self._check_max_addr = 0
+    self._check_bytes = 0
     print("FLH: Starting verification of HEX file")
     # tasmota.log("FLH: Starting verification of HEX file", 2)
   end
@@ -140,6 +142,7 @@ class tubezb_cc2652_flasher
     var CCFG = self.CCFG_address
     if addr < self._check_min_addr   self._check_min_addr = addr end
     if addr + sz > self._check_max_addr   self._check_max_addr = addr + sz end
+    self._check_bytes += sz
     if addr <= CCFG && addr+sz >= CCFG+4
       # we have CCFG in the buffer
       var ccfg_bytes = data.get(4 + CCFG - addr, 4)
@@ -151,12 +154,16 @@ class tubezb_cc2652_flasher
   end
 
   def _check_post()
-    # Require a 128KB+ address span to catch partial HEX files that contain only CCFG
-    # and would erase a working coordinator with no app firmware written.
-    # Address-span is harder to fool with overlapping/repeated records than byte-count.
+    # Require both a 128KB+ address span AND 128KB+ of actual data bytes.
+    # Span alone can be defeated by a sparse HEX (tiny record near 0 + CCFG at 0x57FD8).
+    # Byte-count alone can be defeated by overlapping/repeated records at the same address.
+    # Both checks together close both attack vectors.
     var span = self._check_max_addr - self._check_min_addr
     if span < 0x20000
       raise "value_error", format("firmware address span too small: 0x%06X-0x%06X (%i bytes span, expected >= 128KB)", self._check_min_addr, self._check_max_addr, span)
+    end
+    if self._check_bytes < 0x20000
+      raise "value_error", format("firmware payload too small: %i bytes (expected >= 128KB)", self._check_bytes)
     end
     print("FLH: Verification of HEX file OK")
     # tasmota.log("FLH: Verification of HEX file OK", 2)
