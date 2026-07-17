@@ -18,7 +18,8 @@ class tubezb_cc2652_flasher
   var file_validated    # was the file already validated. It cannot be flashed if not previously parsed and validated
   var file_hex          # intelhex object
   var flasher           # low-level flasher object (cc2652_flasher instance)
-  var _check_bytes      # total data bytes seen during check(), to guard against partial HEX
+  var _check_min_addr   # lowest address seen during check() — used to guard against partial HEX
+  var _check_max_addr   # highest address+size seen during check()
 
   def init()
     self.file_checked = false
@@ -121,7 +122,8 @@ class tubezb_cc2652_flasher
 
   # start verification (log only)
   def _check_pre()
-    self._check_bytes = 0
+    self._check_min_addr = 0xFFFFFF
+    self._check_max_addr = 0
     print("FLH: Starting verification of HEX file")
     # tasmota.log("FLH: Starting verification of HEX file", 2)
   end
@@ -136,7 +138,8 @@ class tubezb_cc2652_flasher
 
     # print(format("> addr=0x%06X sz=0x%02X data=%s", addr, sz, data[offset..offset+sz-1]))
     var CCFG = self.CCFG_address
-    self._check_bytes += sz
+    if addr < self._check_min_addr   self._check_min_addr = addr end
+    if addr + sz > self._check_max_addr   self._check_max_addr = addr + sz end
     if addr <= CCFG && addr+sz >= CCFG+4
       # we have CCFG in the buffer
       var ccfg_bytes = data.get(4 + CCFG - addr, 4)
@@ -148,10 +151,12 @@ class tubezb_cc2652_flasher
   end
 
   def _check_post()
-    # Require at least 128KB of firmware data to catch truncated/partial HEX files
-    # that contain only CCFG and would erase a working coordinator with no app firmware
-    if self._check_bytes < 0x20000
-      raise "value_error", format("firmware too small: %i bytes (expected >= 128KB)", self._check_bytes)
+    # Require a 128KB+ address span to catch partial HEX files that contain only CCFG
+    # and would erase a working coordinator with no app firmware written.
+    # Address-span is harder to fool with overlapping/repeated records than byte-count.
+    var span = self._check_max_addr - self._check_min_addr
+    if span < 0x20000
+      raise "value_error", format("firmware address span too small: 0x%06X-0x%06X (%i bytes span, expected >= 128KB)", self._check_min_addr, self._check_max_addr, span)
     end
     print("FLH: Verification of HEX file OK")
     # tasmota.log("FLH: Verification of HEX file OK", 2)

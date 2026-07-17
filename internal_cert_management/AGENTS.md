@@ -62,7 +62,10 @@ internal_cert_management/
 ├── scripts/
 │   ├── lego.sh              # Renew certificates from Let's Encrypt
 │   ├── upload-to-vault.sh   # Upload certificates to Vault
-│   ├── update_endpoints.sh  # Deploy certificates to endpoints
+│   ├── push_from_files.sh   # Push local lego-data/ certs directly to Vault host (bypass)
+│   ├── update_endpoints.sh  # Thin wrapper: delegates to update_linux.sh + update_udm.sh
+│   ├── update_linux.sh      # Deploy certificates to Linux endpoints from Vault
+│   ├── update_udm.sh        # Deploy certificates to Ubiquiti UDM devices from Vault
 │   └── update_internal_dns.sh  # Legacy DNS update script
 ```
 
@@ -85,11 +88,13 @@ internal_cert_management/
    - Encrypts and stores certificates in Vault KV store
    - Uses credentials from `.env` (`ANSIBLE_PATH`, `ANSIBLE_INVENTORY`)
 
-3.  **Push to Endpoints:** `scripts/update_endpoints.sh` deploys certificates from Vault to endpoints.
-   - Retrieves certificates from Vault
-   - Runs Ansible playbook `internal_certs_update_endpoints.yml`
-   - Applies certificates to designated hosts
-   - Also updates Ubiquiti devices with `ubiquti-configure-certs.yml`
+3.  **Push to Endpoints:** `scripts/update_endpoints.sh` is a thin wrapper that delegates to:
+   - `update_linux.sh` — retrieves certs from Vault, runs `internal_certs_update_endpoints.yml` for Linux hosts
+   - `update_udm.sh` — retrieves certs from Vault, runs `ubiquti-configure-certs.yml` for Ubiquiti devices (skips hosts in `SUBDOMAINS_UDM_EXCLUDE`)
+   - Both sub-scripts activate the Python venv (`VENV_PATH`) for hvac access
+   - Failures in either script are aggregated; both always run regardless of the other's result
+
+4.  **Bypass (Offline):** `scripts/push_from_files.sh` pushes certs directly from `lego-data/` to the Vault host filesystem and signals the Vault Podman container via SIGHUP to reload TLS. Use when the normal Vault KV upload path is unavailable.
 
 ## Architecture Diagram
 

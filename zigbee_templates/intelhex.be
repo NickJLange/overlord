@@ -23,12 +23,10 @@ class intelhex
   var filename          # filename of hex file
   var f                 # file object
   var file_parsed       # was the file already parsed. It cannot be flashed if not previously parsed and validated
-  var file_validated    # was the file already validated. It cannot be flashed if not previously parsed and validated
 
   def init(filename)
     self.filename = str(filename)
     self.file_parsed = false
-    self.file_validated = true
   end
 
   def close()
@@ -63,7 +61,6 @@ class intelhex
 
     except .. as e, m
       self.close()
-      self.file_validated = false
       raise e, m      # re-raise
     end
 
