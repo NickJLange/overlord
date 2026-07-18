@@ -93,7 +93,8 @@ class intelhex
       if line == ""   raise "value_error", "unexpected end of file" end
       if size(line) > 0 && line[-1] == '\n'   line = line[0..-2]  end
       if size(line) > 0 && line[-1] == '\r'   line = line[0..-2]  end
-      if line[0] != ":"   continue end    # ignore empty line or not starting with ':'
+      if size(line) == 0   continue end
+      if line[0] != ":"   continue end    # ignore lines not starting with ':'
       b = b_fromhex(b, line, 1)           # b.fromhex(line, 1)      # convert to bytes, avoid allocating a new object
       var sz = b[0]
 
