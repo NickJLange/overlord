@@ -29,6 +29,7 @@ venv
 
 # Large databases and data files
 macaddress.io-db.json
+data/monitor_state.json
 *.firmware
 *.pkg
 
