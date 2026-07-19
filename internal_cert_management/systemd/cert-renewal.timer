@@ -1,0 +1,10 @@
+[Unit]
+Description=Run cert renewal every 7 days
+
+[Timer]
+OnCalendar=Sun 03:00:00
+Persistent=true
+RandomizedDelaySec=1800
+
+[Install]
+WantedBy=timers.target
