@@ -9,11 +9,13 @@ else
     echo "Error: .env file not found. Please copy .env.example to .env and configure."
     exit 1
 fi
-
+#thingino
 # Validate required variables
 : "${ADMIN_EMAIL:?ADMIN_EMAIL is not set}"
 : "${SUBDOMAINS_EC256:?SUBDOMAINS_EC256 is not set}"
 : "${SUBDOMAINS_RSA2048:?SUBDOMAINS_RSA2048 is not set}"
+: "${LEGO_DNS_PROVIDER:?LEGO_DNS_PROVIDER is not set}"
+: "${LEGO_DNS_RESOLVERS:?LEGO_DNS_RESOLVERS is not set}"
 
 # Convert space-separated strings to arrays
 read -ra subdomains_ec256 <<< "$SUBDOMAINS_EC256"
@@ -23,15 +25,15 @@ for type in ec256
 do
     for subdomain in ${subdomains_ec256[@]}
     do
-        mkdir -p "../lego-data/$subdomain/$type/"
+        mkdir -p "lego-data/$subdomain/$type/"
         echo "Renewing Certs for $subdomain/$type"
-        ls -ld ../lego-data/$subdomain/$type/ ../lego-data/
+        ls -ld lego-data/$subdomain/$type/ lego-data/
 
         podman run -v ./lego-data/:/.lego/ \
         -v ./lego-data/$subdomain/$type/:/.lego/certificates/ \
         --env-file ./etc/lego_secrets.env \
         --read-only \
-        -it goacme/lego \
+        goacme/lego \
         --email "$ADMIN_EMAIL" \
         --key-type=$type \
         --dns "$LEGO_DNS_PROVIDER" \
@@ -45,15 +47,15 @@ for type in rsa2048
 do
     for subdomain in ${subdomains_rsa2048[@]}
     do
-        mkdir -p "../lego-data/$subdomain/$type/"
+        mkdir -p "lego-data/$subdomain/$type/"
         echo "Renewing Certs for $subdomain/$type"
-        ls -ld ../lego-data/$subdomain/$type/ ../lego-data/
+        ls -ld lego-data/$subdomain/$type/ lego-data/
 
         podman run -v ./lego-data/:/.lego/ \
         -v ./lego-data/$subdomain/$type/:/.lego/certificates/ \
         --env-file ./etc/lego_secrets.env \
         --read-only \
-        -it goacme/lego \
+        goacme/lego \
         --email "$ADMIN_EMAIL" \
         --key-type=$type \
         --dns "$LEGO_DNS_PROVIDER" \

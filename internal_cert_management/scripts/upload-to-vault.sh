@@ -6,7 +6,6 @@
 # Parameters:
 #   --force: Skip SSL certificate validation (for self-signed certs)
 
-set -e
 
 # Load configuration from .env file
 if [ -f "$(dirname "$0")/../.env" ]; then
@@ -22,6 +21,18 @@ fi
 : "${CERT_TYPES_VAULT:?CERT_TYPES_VAULT is not set}"
 : "${ANSIBLE_PATH:?ANSIBLE_PATH is not set}"
 : "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
+: "${VENV_PATH:?VENV_PATH is not set}"
+# UDM vault vars (optional — skip UDM upload if not set)
+# SUBDOMAINS_VAULT_UDM and CERT_TYPES_VAULT_UDM
+
+# Activate Python virtual environment
+if [ -f "${VENV_PATH}/bin/activate" ]; then
+    source "${VENV_PATH}/bin/activate"
+else
+    echo "Error: Virtual environment not found at ${VENV_PATH}"
+    echo "Create it with: python3 -m venv ${VENV_PATH} && ${VENV_PATH}/bin/pip install hvac"
+    exit 1
+fi
 
 # Parse command line arguments
 FORCE_SKIP_VALIDATION=false
@@ -43,6 +54,8 @@ done
 # Convert space-separated strings to arrays
 read -ra types <<< "$CERT_TYPES_VAULT"
 read -ra subdomains <<< "$SUBDOMAINS_VAULT"
+read -ra udm_types <<< "${CERT_TYPES_VAULT_UDM:-}"
+read -ra udm_subdomains <<< "${SUBDOMAINS_VAULT_UDM:-}"
 
 if [ ! -d "$ANSIBLE_PATH" ]; then
     echo "Error: Ansible path not found: $ANSIBLE_PATH"
@@ -62,6 +75,8 @@ if [ "$FORCE_SKIP_VALIDATION" = true ]; then
     EXTRA_VARS="$EXTRA_VARS -e force_skip_validation=true"
 fi
 
+FAILED_RUNS=()
+
 for type in ${types[@]}
 do
     for subdomain in ${subdomains[@]}
@@ -72,7 +87,38 @@ do
             -e subdomain="$subdomain" \
             -e vault_cert_algo="$type" \
             -i "$ANSIBLE_INVENTORY" \
-            playbooks/internal_certs_update_vault.yml
+            playbooks/internal_certs_update_vault.yml \
+            || { echo "⚠️  Failed: $type / $subdomain"; FAILED_RUNS+=("$type/$subdomain"); }
      done
 done
-echo "Vault upload completed for $HOSTLIST_VAULT"
+
+# Upload UDM certificates to Vault (if configured)
+if [ ${#udm_subdomains[@]} -gt 0 ] && [ -n "${udm_subdomains[0]}" ]; then
+    echo ""
+    echo "=== Uploading UDM certificates to Vault ==="
+    for type in ${udm_types[@]}
+    do
+        for subdomain in ${udm_subdomains[@]}
+        do
+            echo "Running UDM vault update: $type / $subdomain"
+            ansible-playbook \
+                $EXTRA_VARS \
+                -e subdomain="$subdomain" \
+                -e vault_cert_algo="$type" \
+                -i "$ANSIBLE_INVENTORY" \
+                playbooks/internal_certs_update_vault.yml \
+                || { echo "⚠️  Failed: $type / $subdomain (udm)"; FAILED_RUNS+=("$type/$subdomain"); }
+        done
+    done
+else
+    echo "Skipping UDM vault upload (SUBDOMAINS_VAULT_UDM not configured)"
+fi
+
+if [ ${#FAILED_RUNS[@]} -gt 0 ]; then
+    echo ""
+    echo "Vault upload completed with failures:"
+    for f in "${FAILED_RUNS[@]}"; do echo "  ✗ $f"; done
+    exit 1
+else
+    echo "Vault upload completed successfully"
+fi
