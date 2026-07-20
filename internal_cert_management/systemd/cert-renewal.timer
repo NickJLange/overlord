@@ -1,8 +1,8 @@
 [Unit]
-Description=Run cert renewal every 7 days
+Description=Run cert renewal daily
 
 [Timer]
-OnCalendar=Sun 03:00:00
+OnCalendar=*-*-* 03:00:00
 Persistent=true
 RandomizedDelaySec=1800
 
