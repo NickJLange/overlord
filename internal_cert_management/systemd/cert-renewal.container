@@ -5,15 +5,15 @@ Wants=network-online.target
 
 [Container]
 Image=localhost/cert-renewal:latest
-Volume=/data/infrastructure/cert_management:/app:z
-EnvironmentFile=/data/infrastructure/cert_management/.env
-EnvironmentFile=/data/infrastructure/cert_management/etc/lego_secrets.env
+Volume=/data/infrastructure/overlord/internal_cert_management:/app:z
+EnvironmentFile=/data/infrastructure/overlord/internal_cert_management/.env
+EnvironmentFile=/data/infrastructure/overlord/internal_cert_management/etc/lego_secrets.env
 WorkingDir=/app
 Exec=make all
 
 [Service]
 Type=oneshot
-ExecStartPre=git -C /data/infrastructure/cert_management pull --ff-only
+ExecStartPre=git -C /data/infrastructure/overlord pull --ff-only
 
 [Install]
 WantedBy=default.target
