@@ -63,10 +63,10 @@ quadlet-install: _require-deploy-vars
 	@echo "Installing Quadlet units on $(DEPLOY_HOST) (rootless, user $(DEPLOY_USER))..."
 	ssh $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone https://github.com/NickJLange/overlord.git $(REPO_PATH)"
 	ssh $(DEPLOY_HOST) " \
-		mkdir -p ~/.config/containers/systemd && \
+		mkdir -p ~/.config/containers/systemd ~/.config/systemd/user && \
 		REPO_PATH=$(REPO_PATH) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.container.tmpl \
 			> ~/.config/containers/systemd/cert-renewal.container && \
-		cp $(DEPLOY_PATH)/systemd/cert-renewal.timer ~/.config/containers/systemd/ && \
+		cp $(DEPLOY_PATH)/systemd/cert-renewal.timer ~/.config/systemd/user/ && \
 		systemctl --user daemon-reload && \
 		systemctl --user enable --now cert-renewal.timer && \
 		loginctl enable-linger $(DEPLOY_USER)"
