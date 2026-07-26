@@ -27,27 +27,30 @@ mkdir -p "$LEGO_DATA_DIR"
 read -ra subdomains_ec256 <<< "$SUBDOMAINS_EC256"
 read -ra subdomains_rsa2048 <<< "$SUBDOMAINS_RSA2048"
 
-for subdomain in "${subdomains_ec256[@]}"; do
-    echo "Renewing ec256 cert for $subdomain"
+lego_cmd() {
+    local key_type="$1"; shift
+    local cert_file="$LEGO_DATA_DIR/certificates/$1.crt"
+    local action="renew"
+    if [ ! -f "$cert_file" ]; then
+        echo "No existing cert found, running initial issuance"
+        action="run"
+    fi
     lego \
         --path "$LEGO_DATA_DIR" \
         --email "$ADMIN_EMAIL" \
-        --key-type ec256 \
+        --key-type "$key_type" \
         --dns "$LEGO_DNS_PROVIDER" \
         --dns.resolvers "$LEGO_DNS_RESOLVERS" \
-        --domains "*.$subdomain" \
-        --domains "$subdomain" \
-        renew
+        "$@" \
+        "$action"
+}
+
+for subdomain in "${subdomains_ec256[@]}"; do
+    echo "Processing ec256 cert for $subdomain"
+    lego_cmd ec256 "_.$subdomain" --domains "*.$subdomain" --domains "$subdomain"
 done
 
 for subdomain in "${subdomains_rsa2048[@]}"; do
-    echo "Renewing rsa2048 cert for $subdomain"
-    lego \
-        --path "$LEGO_DATA_DIR" \
-        --email "$ADMIN_EMAIL" \
-        --key-type rsa2048 \
-        --dns "$LEGO_DNS_PROVIDER" \
-        --dns.resolvers "$LEGO_DNS_RESOLVERS" \
-        --domains "$subdomain" \
-        renew
+    echo "Processing rsa2048 cert for $subdomain"
+    lego_cmd rsa2048 "$subdomain" --domains "$subdomain"
 done

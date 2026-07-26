@@ -6,6 +6,7 @@ Wants=network-online.target
 [Container]
 Image=localhost/cert-renewal:latest
 Volume=/data/infrastructure/overlord/internal_cert_management:/app:z
+Volume=/data/infrastructure/overlord/private-smart-home-ansible:/ansible:z
 EnvironmentFile=/data/infrastructure/overlord/internal_cert_management/.env
 EnvironmentFile=/data/infrastructure/overlord/internal_cert_management/etc/lego_secrets.env
 WorkingDir=/app

@@ -21,27 +21,27 @@ vault-force:
 	@echo "Uploading certificates to Vault (with --force flag)..."
 	scripts/upload-to-vault.sh --force
 
-certs: certs-linux certs-udm
+certs: certs-linux
 	@echo "All endpoint updates complete"
 
-certs-force: certs-linux-force certs-udm-force
+certs-force: certs-linux-force
 	@echo "All endpoint updates complete"
 
 certs-linux:
-	@echo "Updating Linux endpoints..."
-	scripts/update_linux.sh
+	@echo "Updating endpoints (Linux + UDM)..."
+	scripts/update_endpoints.sh
 
 certs-linux-force:
-	@echo "Updating Linux endpoints (with --force flag)..."
-	scripts/update_linux.sh --force
+	@echo "Updating endpoints (Linux + UDM, --force)..."
+	scripts/update_endpoints.sh --force
 
 certs-udm:
-	@echo "Updating UDM devices..."
-	scripts/update_udm.sh
+	@echo "UDM updates are handled by update_endpoints.sh (see certs-linux)"
+	scripts/update_endpoints.sh
 
 certs-udm-force:
-	@echo "Updating UDM devices (with --force flag)..."
-	scripts/update_udm.sh --force
+	@echo "UDM updates are handled by update_endpoints.sh (see certs-linux-force)"
+	scripts/update_endpoints.sh --force
 
 push-from-files:
 	@echo "Pushing certs from local files to Vault host..."
@@ -49,7 +49,7 @@ push-from-files:
 
 build:
 	@echo "Building $(IMAGE_NAME):$(IMAGE_TAG) on $(LUNARBEACON_HOST)..."
-	ssh $(LUNARBEACON_HOST) "podman build --build-arg LEGO_ARCH=amd64 -t $(IMAGE_NAME):$(IMAGE_TAG) $(DEPLOY_PATH)/internal_cert_management"
+	ssh $(LUNARBEACON_HOST) "podman build --build-arg LEGO_ARCH=amd64 -t $(IMAGE_NAME):$(IMAGE_TAG) $(DEPLOY_PATH)"
 	@echo "Build complete."
 
 quadlet-install:
