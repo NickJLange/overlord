@@ -37,13 +37,40 @@ Required environment variables:
 
 See `.env.example` for detailed descriptions of each variable.
 
-## Usage
+## Automated Renewal (LunarBeacon)
 
-To initiate the certificate renewal and deployment process:
+The recommended deployment runs as a daily systemd timer via Podman Quadlet on LunarBeacon:
 
-1. Configure `.env` with your environment-specific values
-2. Execute `make refresh-certs` to renew certificates
-3. Execute `make vault` to upload certificates to Vault
-4. Execute `make certs` to deploy certificates to endpoints
+```bash
+# One-time setup: clone repo and install Quadlet units (rootless, user njl)
+make quadlet-install
 
-See `Makefile` for additional targets and options.
+# Build the container image on LunarBeacon
+make build
+
+# Manually scp secrets (never committed or scripted)
+scp .env lunarBeacon:/data/infrastructure/overlord/internal_cert_management/.env
+scp etc/lego_secrets.env lunarBeacon:/data/infrastructure/overlord/internal_cert_management/etc/lego_secrets.env
+
+# Verify timer is active
+ssh lunarBeacon systemctl --user list-timers cert-renewal
+```
+
+The timer fires daily at 03:00, git-pulls the latest repo, and runs `make all` inside the container.
+
+## Manual Usage
+
+To run the full cycle manually:
+
+1. Configure `.env` (copy from `.env.example`)
+2. `make all` — renew certs, upload to Vault, push to endpoints
+
+Individual steps:
+
+| Target | Action |
+|---|---|
+| `make refresh-certs` | Renew certificates via lego |
+| `make vault` | Upload certificates to Vault |
+| `make certs` | Push certificates to all endpoints (Linux + UDM) |
+
+Note: `ANSIBLE_PATH` should be `/ansible` when running inside the container (bind-mounted from `private-smart-home-ansible`), or the full host path when running locally.
