@@ -61,7 +61,7 @@ build: _require-deploy-vars
 
 quadlet-install: _require-deploy-vars
 	@echo "Installing Quadlet units on $(DEPLOY_HOST) (rootless, user $(DEPLOY_USER))..."
-	ssh $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone git@github.com:NickJLange/overlord.git $(REPO_PATH)"
+	ssh $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone https://github.com/NickJLange/overlord.git $(REPO_PATH)"
 	ssh $(DEPLOY_HOST) " \
 		mkdir -p ~/.config/containers/systemd && \
 		REPO_PATH=$(REPO_PATH) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.container.tmpl \
