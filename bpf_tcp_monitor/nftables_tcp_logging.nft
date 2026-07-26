@@ -1,0 +1,174 @@
+#!/usr/sbin/nft -f
+
+# NFTables TCP Connection Logging Rules
+# Logs SYN, FIN, RST packets with 5-tuple and socket owner information
+
+table inet tcp_logger {
+    # Chain for outbound TCP tracking (can get socket owner)
+    chain output {
+        type filter hook output priority filter; policy accept;
+        
+        # Log TCP SYN packets (connection initiation)
+        tcp flags syn tcp flags != ack \
+            log prefix "TCP_SYN_OUT: " \
+            group 1 \
+            queue-threshold 100 \
+            snaplen 128
+
+        # Log TCP FIN packets (graceful close)
+        tcp flags fin \
+            log prefix "TCP_FIN_OUT: " \
+            group 2 \
+            queue-threshold 100 \
+            snaplen 128
+
+        # Log TCP RST packets (connection reset)
+        tcp flags rst \
+            log prefix "TCP_RST_OUT: " \
+            group 3 \
+            queue-threshold 100 \
+            snaplen 128
+    }
+
+    # Chain for inbound TCP tracking
+    chain input {
+        type filter hook input priority filter; policy accept;
+        
+        # Log inbound TCP SYN packets
+        tcp flags syn tcp flags != ack \
+            log prefix "TCP_SYN_IN: " \
+            group 4 \
+            queue-threshold 100 \
+            snaplen 128
+
+        # Log inbound TCP FIN packets
+        tcp flags fin \
+            log prefix "TCP_FIN_IN: " \
+            group 5 \
+            queue-threshold 100 \
+            snaplen 128
+
+        # Log inbound TCP RST packets
+        tcp flags rst \
+            log prefix "TCP_RST_IN: " \
+            group 6 \
+            queue-threshold 100 \
+            snaplen 128
+    }
+
+    # More detailed logging with socket owner (outbound only)
+    chain output_detailed {
+        type filter hook output priority filter + 10; policy accept;
+        
+        # SYN packets with socket owner logging
+        meta skuid exists tcp flags syn tcp flags != ack \
+            log prefix "TCP_SYN_OWNER: " \
+            level info \
+            flags skuid \
+            flags ether \
+            group 10
+
+        # FIN packets with socket owner logging  
+        meta skuid exists tcp flags fin \
+            log prefix "TCP_FIN_OWNER: " \
+            level info \
+            flags skuid \
+            flags ether \
+            group 11
+
+        # RST packets with socket owner logging
+        meta skuid exists tcp flags rst \
+            log prefix "TCP_RST_OWNER: " \
+            level info \
+            flags skuid \
+            flags ether \
+            group 12
+    }
+
+    # Chain for connection state tracking
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+        
+        # Log forwarded TCP state changes
+        tcp flags syn tcp flags != ack \
+            log prefix "TCP_FWD_SYN: " \
+            group 20
+
+        tcp flags fin \
+            log prefix "TCP_FWD_FIN: " \
+            group 21
+
+        tcp flags rst \
+            log prefix "TCP_FWD_RST: " \
+            group 22
+    }
+
+    # Set for tracking established connections
+    set tcp_connections {
+        type ipv4_addr . inet_service . ipv4_addr . inet_service
+        size 65536
+        timeout 2h
+        flags dynamic,timeout
+    }
+
+    # Chain for connection establishment tracking
+    chain conntrack {
+        type filter hook output priority filter + 20; policy accept;
+
+        # Track new connections on SYN
+        tcp flags syn tcp flags != ack \
+            add @tcp_connections { ip saddr . tcp sport . ip daddr . tcp dport } \
+            log prefix "TCP_NEW_CONN: " \
+            group 30
+
+        # Remove connections on FIN/RST
+        tcp flags fin \
+            delete @tcp_connections { ip saddr . tcp sport . ip daddr . tcp dport } \
+            log prefix "TCP_CLOSE_CONN: " \
+            group 31
+
+        tcp flags rst \
+            delete @tcp_connections { ip saddr . tcp sport . ip daddr . tcp dport } \
+            log prefix "TCP_RESET_CONN: " \
+            group 32
+    }
+}
+
+# Alternative table with more granular per-service logging
+table inet tcp_service_logger {
+    chain output {
+        type filter hook output priority filter; policy accept;
+
+        # HTTP/HTTPS connections
+        tcp dport { 80, 443 } tcp flags syn tcp flags != ack \
+            meta skuid exists \
+            log prefix "HTTP_SYN: " \
+            level notice \
+            flags skuid \
+            group 100
+
+        # SSH connections  
+        tcp dport 22 tcp flags syn tcp flags != ack \
+            meta skuid exists \
+            log prefix "SSH_SYN: " \
+            level notice \
+            flags skuid \
+            group 101
+
+        # Database connections
+        tcp dport { 3306, 5432, 1521, 1433 } tcp flags syn tcp flags != ack \
+            meta skuid exists \
+            log prefix "DB_SYN: " \
+            level notice \
+            flags skuid \
+            group 102
+
+        # Custom application ports
+        tcp dport { 8080, 9000, 3000 } tcp flags syn tcp flags != ack \
+            meta skuid exists \
+            log prefix "APP_SYN: " \
+            level notice \
+            flags skuid \
+            group 103
+    }
+}

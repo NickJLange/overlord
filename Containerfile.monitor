@@ -1,0 +1,33 @@
+FROM python:3.12-slim-trixie
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install system utilities including fping and ping
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fping \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN uv venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    uv pip install -r requirements.txt
+
+# Copy application files
+COPY bin/ /app/bin/
+COPY lib/ /app/lib/
+COPY private-smart-home-ansible/tasmota.mac_mapping.inventory /app/tasmota.inventory
+# macaddress.io-db.json is gitignored — download from macaddress.io before building
+COPY macaddress.io-db.json /app/
+COPY private-smart-home-ansible/ /app/private-smart-home-ansible/
+
+# Define environment variables
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+ENV FPING_PATH="/usr/bin/fping"
+
+# Default command to run a check sweep
+ENTRYPOINT ["python", "bin/monitor_services.py"]
+CMD ["--check", "--debug"]

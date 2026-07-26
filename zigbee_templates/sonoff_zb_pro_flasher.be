@@ -39,6 +39,8 @@ class sonoff_zb_pro_flasher
   # parse it completely once, and verify some values
   #################################################################################
   def check()
+    self.file_checked = false
+    self.file_validated = false
     self.file_hex.parse(/ -> self._check_pre(),
                         / address, len, data, offset -> self._check_cb(address, len, data, offset),
                         / -> self._check_post()
@@ -71,6 +73,7 @@ class sonoff_zb_pro_flasher
       self.file_checked = false
       self.file_validated = false
       print(f"FLH: Exception raised '{e}' - '{m}'")
+      raise e, m
     end
   end
 
@@ -127,7 +130,7 @@ class sonoff_zb_pro_flasher
   def _check_cb(addr, sz, data, offset)
     # print(format("> addr=0x%06X sz=0x%02X data=%s", addr, sz, data[offset..offset+sz-1]))
     var CCFG = self.CCFG_address
-    if addr <= CCFG && addr+sz > CCFG+4
+    if addr <= CCFG && addr+sz >= CCFG+4
       # we have CCFG in the buffer
       var ccfg_bytes = data.get(4 + CCFG - addr, 4)
 
