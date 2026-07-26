@@ -37,23 +37,23 @@ Required environment variables:
 
 See `.env.example` for detailed descriptions of each variable.
 
-## Automated Renewal (LunarBeacon)
+## Automated Renewal (Systemd Quadlet)
 
-The recommended deployment runs as a daily systemd timer via Podman Quadlet on LunarBeacon:
+The recommended deployment runs as a daily systemd timer via Podman Quadlet on the target host. All host-specific values come from `.env` — set `DEPLOY_HOST`, `DEPLOY_USER`, and `REPO_PATH` before running any deploy targets.
 
 ```bash
-# One-time setup: clone repo and install Quadlet units (rootless, user njl)
+# One-time setup: clone repo and install Quadlet units (rootless Podman)
 make quadlet-install
 
-# Build the container image on LunarBeacon
+# Build the container image on the deploy host
 make build
 
-# Manually scp secrets (never committed or scripted)
-scp .env lunarBeacon:/data/infrastructure/overlord/internal_cert_management/.env
-scp etc/lego_secrets.env lunarBeacon:/data/infrastructure/overlord/internal_cert_management/etc/lego_secrets.env
+# Manually scp secrets — never committed or scripted
+scp .env ${DEPLOY_HOST}:${REPO_PATH}/internal_cert_management/.env
+scp etc/lego_secrets.env ${DEPLOY_HOST}:${REPO_PATH}/internal_cert_management/etc/lego_secrets.env
 
 # Verify timer is active
-ssh lunarBeacon systemctl --user list-timers cert-renewal
+ssh ${DEPLOY_HOST} systemctl --user list-timers cert-renewal
 ```
 
 The timer fires daily at 03:00, git-pulls the latest repo, and runs `make all` inside the container.

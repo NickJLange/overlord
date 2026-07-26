@@ -1,14 +1,12 @@
 -include .env
 export
 
-DEPLOY_HOST ?= lunarBeacon
-DEPLOY_USER ?= njl
-REPO_PATH ?= /data/infrastructure/overlord
+# Required — set in .env: DEPLOY_HOST, DEPLOY_USER, REPO_PATH
 DEPLOY_PATH ?= $(REPO_PATH)/internal_cert_management
 IMAGE_NAME ?= cert-renewal
 IMAGE_TAG ?= latest
 
-.PHONY: all refresh-certs vault vault-force certs certs-force certs-linux certs-linux-force certs-udm certs-udm-force push-from-files build quadlet-install clean
+.PHONY: all refresh-certs vault vault-force certs certs-force certs-linux certs-linux-force certs-udm certs-udm-force push-from-files build quadlet-install clean _require-deploy-vars
 
 all: refresh-certs vault certs
 	@echo "Certificate cycle complete"
@@ -51,12 +49,17 @@ push-from-files:
 	@echo "Pushing certs from local files to Vault host..."
 	scripts/push_from_files.sh
 
-build:
+_require-deploy-vars:
+	@test -n "$(DEPLOY_HOST)" || (echo "ERROR: DEPLOY_HOST not set in .env"; exit 1)
+	@test -n "$(DEPLOY_USER)" || (echo "ERROR: DEPLOY_USER not set in .env"; exit 1)
+	@test -n "$(REPO_PATH)"   || (echo "ERROR: REPO_PATH not set in .env"; exit 1)
+
+build: _require-deploy-vars
 	@echo "Building $(IMAGE_NAME):$(IMAGE_TAG) on $(DEPLOY_HOST)..."
 	ssh $(DEPLOY_HOST) "podman build --build-arg LEGO_ARCH=amd64 -t $(IMAGE_NAME):$(IMAGE_TAG) $(DEPLOY_PATH)"
 	@echo "Build complete."
 
-quadlet-install:
+quadlet-install: _require-deploy-vars
 	@echo "Installing Quadlet units on $(DEPLOY_HOST) (rootless, user $(DEPLOY_USER))..."
 	ssh $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone git@github.com:NickJLange/overlord.git $(REPO_PATH)"
 	ssh $(DEPLOY_HOST) " \
