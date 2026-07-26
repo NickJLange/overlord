@@ -1,4 +1,8 @@
-LUNARBEACON_HOST ?= lunarBeacon
+-include .env
+export
+
+DEPLOY_HOST ?= lunarBeacon
+DEPLOY_USER ?= njl
 REPO_PATH ?= /data/infrastructure/overlord
 DEPLOY_PATH ?= $(REPO_PATH)/internal_cert_management
 IMAGE_NAME ?= cert-renewal
@@ -48,20 +52,21 @@ push-from-files:
 	scripts/push_from_files.sh
 
 build:
-	@echo "Building $(IMAGE_NAME):$(IMAGE_TAG) on $(LUNARBEACON_HOST)..."
-	ssh $(LUNARBEACON_HOST) "podman build --build-arg LEGO_ARCH=amd64 -t $(IMAGE_NAME):$(IMAGE_TAG) $(DEPLOY_PATH)"
+	@echo "Building $(IMAGE_NAME):$(IMAGE_TAG) on $(DEPLOY_HOST)..."
+	ssh $(DEPLOY_HOST) "podman build --build-arg LEGO_ARCH=amd64 -t $(IMAGE_NAME):$(IMAGE_TAG) $(DEPLOY_PATH)"
 	@echo "Build complete."
 
 quadlet-install:
-	@echo "Installing Quadlet units on $(LUNARBEACON_HOST) (rootless, user njl)..."
-	ssh $(LUNARBEACON_HOST) "[ -d $(REPO_PATH)/.git ] || git clone git@github.com:NickJLange/overlord.git $(REPO_PATH)"
-	ssh $(LUNARBEACON_HOST) " \
+	@echo "Installing Quadlet units on $(DEPLOY_HOST) (rootless, user $(DEPLOY_USER))..."
+	ssh $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone git@github.com:NickJLange/overlord.git $(REPO_PATH)"
+	ssh $(DEPLOY_HOST) " \
 		mkdir -p ~/.config/containers/systemd && \
-		cp $(DEPLOY_PATH)/systemd/cert-renewal.container ~/.config/containers/systemd/ && \
+		REPO_PATH=$(REPO_PATH) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.container.tmpl \
+			> ~/.config/containers/systemd/cert-renewal.container && \
 		cp $(DEPLOY_PATH)/systemd/cert-renewal.timer ~/.config/containers/systemd/ && \
 		systemctl --user daemon-reload && \
 		systemctl --user enable --now cert-renewal.timer && \
-		loginctl enable-linger njl"
+		loginctl enable-linger $(DEPLOY_USER)"
 	@echo "Quadlet installed. Build the image with 'make build', then scp secrets separately."
 
 clean:
