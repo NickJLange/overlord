@@ -1,5 +1,10 @@
 # Datadog Monitor Configuration for Internal Cert Renewal
-# Deploy via Datadog API: https://docs.datadoghq.com/api/latest/monitors/#create-a-monitor
+# Deploy via: POST https://api.datadoghq.com/api/v1/monitor
+# Update via:  PUT  https://api.datadoghq.com/api/v1/monitor/<id>
+#
+# Deployed monitor IDs:
+#   308823241 — LunarBeacon - cert-renewal.service Failed
+#   308823620 — LunarBeacon - cert-renewal.timer Not Active
 #
 # Prerequisites:
 # - Datadog Agent running on LunarBeacon with systemd check enabled
