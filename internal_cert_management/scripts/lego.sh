@@ -32,6 +32,7 @@ read -ra subdomains_rsa2048 <<< "$SUBDOMAINS_RSA2048"
 lego_cmd() {
     local key_type="$1"; shift
     lego run \
+        --accept-tos \
         --path "$LEGO_DATA_DIR" \
         --email "$ADMIN_EMAIL" \
         --key-type "$key_type" \
