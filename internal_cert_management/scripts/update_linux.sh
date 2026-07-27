@@ -23,13 +23,9 @@ fi
 : "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
 : "${VENV_PATH:?VENV_PATH is not set}"
 
-# Activate Python virtual environment
-if [ -f "${VENV_PATH}/bin/activate" ]; then
+# Activate Python virtual environment if available (skipped inside container where packages are global)
+if [ -n "${VENV_PATH}" ] && [ -f "${VENV_PATH}/bin/activate" ]; then
     source "${VENV_PATH}/bin/activate"
-else
-    echo "Error: Virtual environment not found at ${VENV_PATH}"
-    echo "Create it with: python3 -m venv ${VENV_PATH} && ${VENV_PATH}/bin/pip install hvac"
-    exit 1
 fi
 
 # Parse command line arguments
