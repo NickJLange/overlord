@@ -27,30 +27,25 @@ mkdir -p "$LEGO_DATA_DIR"
 read -ra subdomains_ec256 <<< "$SUBDOMAINS_EC256"
 read -ra subdomains_rsa2048 <<< "$SUBDOMAINS_RSA2048"
 
+# lego v5: all flags are subcommand-level (not global); `run` handles both
+# initial issuance and renewal automatically based on cert expiry.
 lego_cmd() {
     local key_type="$1"; shift
-    local cert_file="$LEGO_DATA_DIR/certificates/$1.crt"
-    local action="renew"
-    if [ ! -f "$cert_file" ]; then
-        echo "No existing cert found, running initial issuance"
-        action="run"
-    fi
-    lego \
+    lego run \
         --path "$LEGO_DATA_DIR" \
         --email "$ADMIN_EMAIL" \
         --key-type "$key_type" \
         --dns "$LEGO_DNS_PROVIDER" \
         --dns.resolvers "$LEGO_DNS_RESOLVERS" \
-        "$@" \
-        "$action"
+        "$@"
 }
 
 for subdomain in "${subdomains_ec256[@]}"; do
     echo "Processing ec256 cert for $subdomain"
-    lego_cmd ec256 "_.$subdomain" --domains "*.$subdomain" --domains "$subdomain"
+    lego_cmd ec256 --domains "*.$subdomain" --domains "$subdomain"
 done
 
 for subdomain in "${subdomains_rsa2048[@]}"; do
     echo "Processing rsa2048 cert for $subdomain"
-    lego_cmd rsa2048 "$subdomain" --domains "$subdomain"
+    lego_cmd rsa2048 --domains "$subdomain"
 done
