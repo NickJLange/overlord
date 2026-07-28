@@ -65,7 +65,7 @@ quadlet-install: _require-deploy-vars
 	ssh $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone https://github.com/NickJLange/overlord.git $(REPO_PATH)"
 	ssh $(DEPLOY_HOST) " \
 		mkdir -p ~/.config/containers/systemd ~/.config/systemd/user && \
-		REPO_PATH=$(REPO_PATH) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.container.tmpl \
+		REPO_PATH=$(REPO_PATH) DEPLOY_USER=$(DEPLOY_USER) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.container.tmpl \
 			> ~/.config/containers/systemd/cert-renewal.container && \
 		cp $(DEPLOY_PATH)/systemd/cert-renewal.timer ~/.config/systemd/user/ && \
 		systemctl --user daemon-reload && \
