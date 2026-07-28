@@ -22,6 +22,7 @@ fi
 : "${ANSIBLE_PATH:?ANSIBLE_PATH is not set}"
 : "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
 : "${VENV_PATH:?VENV_PATH is not set}"
+: "${VAULT_CERT_USER:?VAULT_CERT_USER is not set}"
 # UDM vault vars (optional — skip UDM upload if not set)
 # SUBDOMAINS_VAULT_UDM and CERT_TYPES_VAULT_UDM
 
@@ -66,7 +67,7 @@ fi
 cd "$ANSIBLE_PATH"
 
 # Build extra vars for ansible
-EXTRA_VARS="-e hostlist=$HOSTLIST_VAULT"
+EXTRA_VARS="-e hostlist=$HOSTLIST_VAULT -e vault_cert_user=$VAULT_CERT_USER"
 if [ "$FORCE_SKIP_VALIDATION" = true ]; then
     EXTRA_VARS="$EXTRA_VARS -e force_skip_validation=true"
 fi
