@@ -5,8 +5,9 @@ export
 DEPLOY_PATH ?= $(REPO_PATH)/internal_cert_management
 IMAGE_NAME ?= cert-renewal
 IMAGE_TAG ?= latest
+ANSIBLE_SUBMODULE ?= $(abspath $(CURDIR)/../private-smart-home-ansible)
 
-.PHONY: all refresh-certs vault vault-force certs certs-force certs-linux certs-linux-force certs-udm certs-udm-force push-from-files build quadlet-install clean _require-deploy-vars
+.PHONY: all refresh-certs vault vault-force certs certs-force certs-linux certs-linux-force certs-udm certs-udm-force push-from-files build quadlet-install deploy-config clean _require-deploy-vars
 
 all: refresh-certs vault certs
 	@echo "Certificate cycle complete"
@@ -71,6 +72,15 @@ quadlet-install: _require-deploy-vars
 		systemctl --user enable --now cert-renewal.timer && \
 		loginctl enable-linger $(DEPLOY_USER)"
 	@echo "Quadlet installed. Build the image with 'make build', then scp secrets separately."
+
+deploy-config: _require-deploy-vars
+	@echo "Deploying ansible config files to $(DEPLOY_HOST)..."
+	ssh $(DEPLOY_HOST) "mkdir -p $(REPO_PATH)/internal_cert_management/etc"
+	scp $(ANSIBLE_SUBMODULE)/ansible.cfg \
+		$(DEPLOY_HOST):$(REPO_PATH)/internal_cert_management/etc/ansible.cfg
+	scp $(ANSIBLE_SUBMODULE)/non_tasmota_hosts.inventory \
+		$(DEPLOY_HOST):$(REPO_PATH)/internal_cert_management/etc/non_tasmota_hosts.inventory
+	@echo "Config deployed. Run quadlet-install if the container unit changed."
 
 clean:
 	@echo "Cleaning up...Nothing!"
