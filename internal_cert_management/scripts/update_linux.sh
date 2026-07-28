@@ -22,6 +22,7 @@ fi
 : "${ANSIBLE_PATH:?ANSIBLE_PATH is not set}"
 : "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
 : "${VENV_PATH:?VENV_PATH is not set}"
+# LINUX_HOSTS_EXCLUDE — optional space-separated list of hosts to skip (e.g. "terraAlpha lunarBeacon")
 
 # Activate Python virtual environment if available (skipped inside container where packages are global)
 if [ -n "${VENV_PATH}" ] && [ -f "${VENV_PATH}/bin/activate" ]; then
@@ -70,10 +71,17 @@ FAILED_RUNS=()
 for subdomain in ${subdomains[@]}
 do
     cd "$ANSIBLE_PATH" || exit 1
+    # Build --limit: start with the group, append :!host for each excluded host
+    LIMIT="${subdomain}_linux"
+    for excluded in ${LINUX_HOSTS_EXCLUDE:-}; do
+        LIMIT="${LIMIT}:!${excluded}"
+    done
+
     for type in ${types[@]}
     do
         ansible-playbook \
             $EXTRA_VARS \
+            --limit "$LIMIT" \
             -e hostlist="${subdomain}_linux" \
             -e subdomain="${subdomain}.${DOMAIN_SUFFIX}" \
             -e vault_cert_algo="$type" \
