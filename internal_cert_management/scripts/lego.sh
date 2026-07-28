@@ -17,6 +17,8 @@ fi
 : "${ADMIN_EMAIL:?ADMIN_EMAIL is not set}"
 : "${SUBDOMAINS_EC256:?SUBDOMAINS_EC256 is not set}"
 : "${SUBDOMAINS_RSA2048:?SUBDOMAINS_RSA2048 is not set}"
+: "${LEGO_DNS_PROVIDER:?LEGO_DNS_PROVIDER is not set}"
+: "${LEGO_DNS_RESOLVERS:?LEGO_DNS_RESOLVERS is not set}"
 
 # DNS provider credentials come from etc/lego_secrets.env, injected by the
 # Quadlet EnvironmentFile= — no --env-file needed here.

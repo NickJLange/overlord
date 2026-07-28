@@ -12,7 +12,7 @@ Volume=${REPO_PATH}/internal_cert_management/etc/non_tasmota_hosts.inventory:/an
 Volume=/home/${DEPLOY_USER}/.ssh/id_cert_push:/root/.ssh/id_cert_push:z,ro
 Environment=ANSIBLE_PRIVATE_KEY_FILE=/root/.ssh/id_cert_push
 Environment=ANSIBLE_HOST_KEY_CHECKING=False
-Environment=ANSIBLE_REMOTE_USER=njl
+Environment=ANSIBLE_REMOTE_USER=${DEPLOY_USER}
 EnvironmentFile=${REPO_PATH}/internal_cert_management/.env
 EnvironmentFile=${REPO_PATH}/internal_cert_management/etc/lego_secrets.env
 WorkingDir=/app
