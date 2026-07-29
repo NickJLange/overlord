@@ -67,7 +67,7 @@ fi
 cd "$ANSIBLE_PATH"
 
 # Build extra vars for ansible
-EXTRA_VARS="-e hostlist=$HOSTLIST_VAULT -e vault_cert_user=$VAULT_CERT_USER"
+EXTRA_VARS="-e hostlist=$HOSTLIST_VAULT"
 if [ "$FORCE_SKIP_VALIDATION" = true ]; then
     EXTRA_VARS="$EXTRA_VARS -e force_skip_validation=true"
 fi
@@ -81,6 +81,7 @@ do
         echo "Running default vault update"
         ansible-playbook \
             $EXTRA_VARS \
+            -e vault_cert_user="$VAULT_CERT_USER" \
             -e subdomain="$subdomain" \
             -e vault_cert_algo="$type" \
             -i "$ANSIBLE_INVENTORY" \
@@ -100,6 +101,7 @@ if [ ${#udm_subdomains[@]} -gt 0 ] && [ -n "${udm_subdomains[0]}" ]; then
             echo "Running UDM vault update: $type / $subdomain"
             ansible-playbook \
                 $EXTRA_VARS \
+                -e vault_cert_user="$VAULT_CERT_USER" \
                 -e subdomain="$subdomain" \
                 -e vault_cert_algo="$type" \
                 -i "$ANSIBLE_INVENTORY" \
