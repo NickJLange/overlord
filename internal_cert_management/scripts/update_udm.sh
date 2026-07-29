@@ -79,7 +79,7 @@ is_excluded() {
 
 FAILED_RUNS=()
 
-for subdomain in ${subdomains[@]}
+for subdomain in "${subdomains[@]}"
 do
     if is_excluded "$subdomain"; then
         echo "Skipping UDM for $subdomain (excluded via SUBDOMAINS_UDM_EXCLUDE)"

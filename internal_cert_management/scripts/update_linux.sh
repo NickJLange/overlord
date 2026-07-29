@@ -68,7 +68,7 @@ fi
 
 FAILED_RUNS=()
 
-for subdomain in ${subdomains[@]}
+for subdomain in "${subdomains[@]}"
 do
     cd "$ANSIBLE_PATH" || exit 1
     # Build --limit: start with the group, append :!host for each excluded host
@@ -77,7 +77,7 @@ do
         LIMIT="${LIMIT}:!${excluded}"
     done
 
-    for type in ${types[@]}
+    for type in "${types[@]}"
     do
         ansible-playbook \
             $EXTRA_VARS \

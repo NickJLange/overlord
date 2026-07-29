@@ -74,28 +74,28 @@ fi
 
 FAILED_RUNS=()
 
-for type in ${types[@]}
+for type in "${types[@]}"
 do
-    for subdomain in ${subdomains[@]}
-    do    # Always run the default playbook (without vault_cert_algo)
-         echo "Running default vault update"
-         ansible-playbook \
+    for subdomain in "${subdomains[@]}"
+    do
+        echo "Running default vault update"
+        ansible-playbook \
             $EXTRA_VARS \
             -e subdomain="$subdomain" \
             -e vault_cert_algo="$type" \
             -i "$ANSIBLE_INVENTORY" \
             playbooks/internal_certs_update_vault.yml \
             || { echo "⚠️  Failed: $type / $subdomain"; FAILED_RUNS+=("$type/$subdomain"); }
-     done
+    done
 done
 
 # Upload UDM certificates to Vault (if configured)
 if [ ${#udm_subdomains[@]} -gt 0 ] && [ -n "${udm_subdomains[0]}" ]; then
     echo ""
     echo "=== Uploading UDM certificates to Vault ==="
-    for type in ${udm_types[@]}
+    for type in "${udm_types[@]}"
     do
-        for subdomain in ${udm_subdomains[@]}
+        for subdomain in "${udm_subdomains[@]}"
         do
             echo "Running UDM vault update: $type / $subdomain"
             ansible-playbook \
