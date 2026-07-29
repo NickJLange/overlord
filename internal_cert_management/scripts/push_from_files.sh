@@ -42,6 +42,9 @@ echo "Pushing certs from local files to Vault host ($HOSTLIST_VAULT) for $SUBDOM
 
 EXTRA_VARS="-e hostlist=$HOSTLIST_VAULT"
 
+# Ansible expects cert files under a subdirectory matching the domain and key type.
+# Actual lego layout: lego-data/certificates/<domain>.*  (flat, not nested by type).
+# Adjust SUBDOMAIN_VAULT_HOST/CERT_TYPE_VAULT_HOST in .env to match your lego-data layout.
 cert_source_dir="$(cd "$LEGO_DATA_DIR/${SUBDOMAIN_VAULT_HOST}/${CERT_TYPE_VAULT_HOST}" 2>/dev/null && pwd)"
 if [ -z "$cert_source_dir" ]; then
     echo "Error: Cert source dir not found: ${LEGO_DATA_DIR}/${SUBDOMAIN_VAULT_HOST}/${CERT_TYPE_VAULT_HOST}"
