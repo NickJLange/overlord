@@ -73,7 +73,8 @@ do
     cd "$ANSIBLE_PATH" || exit 1
     # Build --limit: start with the group, append :!host for each excluded host
     LIMIT="${subdomain}_linux"
-    for excluded in ${LINUX_HOSTS_EXCLUDE:-}; do
+    read -ra excluded_hosts <<< "${LINUX_HOSTS_EXCLUDE:-}"
+    for excluded in "${excluded_hosts[@]}"; do
         LIMIT="${LIMIT}:!${excluded}"
     done
 
