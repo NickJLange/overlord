@@ -28,6 +28,9 @@ mkdir -p "$LEGO_DATA_DIR"
 
 read -ra subdomains_ec256 <<< "$SUBDOMAINS_EC256"
 read -ra subdomains_rsa2048 <<< "$SUBDOMAINS_RSA2048"
+# Note: lego names cert files by domain, not key type. SUBDOMAINS_EC256 and
+# SUBDOMAINS_RSA2048 must not share any domain — a duplicate would cause the
+# second run to overwrite the first's cert files in lego-data/certificates/.
 
 # lego v5: all flags are subcommand-level (not global); `run` handles both
 # initial issuance and renewal automatically based on cert expiry.
