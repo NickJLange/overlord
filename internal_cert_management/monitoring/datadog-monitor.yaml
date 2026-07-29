@@ -1,8 +1,6 @@
 # Datadog Monitor Configuration for Internal Cert Renewal
-# Deploy via: POST https://api.datadoghq.com/api/v1/monitor
-# Update via:  PUT  https://api.datadoghq.com/api/v1/monitor/<id>
 #
-# Deployed monitor IDs:
+# Deployed monitor IDs (already live — use PUT to update):
 #   308823241 — LunarBeacon - cert-renewal.service Failed
 #   308823620 — LunarBeacon - cert-renewal.timer Not Active
 #
@@ -10,84 +8,96 @@
 # - Datadog Agent running on LunarBeacon with systemd check enabled
 # - cert-renewal.service managed by systemd (via Podman Quadlet)
 
-# Systemd Check Configuration (install on Datadog Agent on LunarBeacon)
-# Place in /etc/datadog-agent/conf.d/systemd.d/conf.yaml
-systemd_check:
-  instances:
-    - unit_names:
-        - cert-renewal.service
-        - cert-renewal.timer
+# ─── Agent Check Configuration ───────────────────────────────────────────────
+# Place in /etc/datadog-agent/conf.d/systemd.d/conf.yaml on LunarBeacon.
+# The Datadog systemd integration requires the standard init_config/instances
+# layout — NOT nested under a "systemd_check:" key.
+#
+# init_config:
+#
+# instances:
+#   - unit_names:
+#       - cert-renewal.service
+#       - cert-renewal.timer
 
----
-# Monitor: service entered failed state
-# Fires if the last cert-renewal run exited non-zero (lego error, ansible error, etc.)
-monitor:
-  name: "LunarBeacon - cert-renewal.service Failed"
-  type: service check
-  query: '"systemd.service.failed".over("unit:cert-renewal.service","host:lunarBeacon").by("host").last(1).count_by_status()'
-  message: |
-    {{#is_alert}}
-    cert-renewal.service has entered the failed state on {{host.name}}.
+# ─── Monitor 1: service entered failed state ──────────────────────────────────
+# Deploy: POST https://api.datadoghq.com/api/v1/monitor
+# Update: PUT  https://api.datadoghq.com/api/v1/monitor/308823241
+#
+# Fires if cert-renewal.service exits non-zero (lego error, ansible error, etc.)
+# The Datadog systemd integration emits "systemd.unit.state" as a service check.
+#
+# Payload (top-level fields only — no "monitor:" wrapper):
+#   name: "LunarBeacon - cert-renewal.service Failed"
+#   type: "service check"
+#   query: '"systemd.unit.state".over("unit:cert-renewal.service","host:lunarBeacon").by("host").last(1).count_by_status()'
+#   message: |
+#     {{#is_alert}}
+#     cert-renewal.service has entered the failed state on {{host.name}}.
+#
+#     The daily certificate renewal did not complete successfully. Certificates
+#     will expire if this is not resolved — Let's Encrypt certs are valid 90 days
+#     and renewal is attempted when ~1/3 of lifetime remains (~60 days).
+#
+#     Troubleshoot:
+#       ssh lunarBeacon
+#       journalctl --user -u cert-renewal.service -n 100
+#
+#     @slack-homelab-alerts
+#     {{/is_alert}}
+#
+#     {{#is_recovery}}
+#     cert-renewal.service has recovered on {{host.name}}.
+#     {{/is_recovery}}
+#   options:
+#     thresholds:
+#       critical: 1
+#       ok: 1
+#     notify_no_data: false
+#     notify_audit: false
+#     renotify_interval: 1440
+#   tags:
+#     - service:cert-renewal
+#     - env:production
+#     - host:lunarBeacon
+#   priority: 2
 
-    The daily certificate renewal did not complete successfully. Certificates
-    will expire if this is not resolved — Let's Encrypt certs are valid 90 days
-    and renewal is attempted when ~1/3 of lifetime remains (~60 days).
-
-    Troubleshoot:
-      ssh lunarBeacon
-      journalctl --user -u cert-renewal.service -n 100
-
-    @slack-homelab-alerts
-    {{/is_alert}}
-
-    {{#is_recovery}}
-    cert-renewal.service has recovered on {{host.name}}.
-    {{/is_recovery}}
-  options:
-    thresholds:
-      critical: 1
-      ok: 1
-    notify_no_data: false
-    notify_audit: false
-    renotify_interval: 1440
-  tags:
-    - service:cert-renewal
-    - env:production
-    - host:lunarBeacon
-  priority: 2
-
----
-# Monitor: timer has not fired in >26 hours (catches missed runs / timer death)
-monitor_timer:
-  name: "LunarBeacon - cert-renewal.timer Stale"
-  type: metric alert
-  query: "max(last_26h):max:systemd.timer.last_trigger_usec{unit:cert-renewal.timer,host:lunarBeacon} < 1"
-  message: |
-    {{#is_alert}}
-    cert-renewal.timer has not fired on {{host.name}} in over 26 hours.
-
-    The timer may be disabled or the unit may have failed to load.
-
-    Check:
-      ssh lunarBeacon
-      systemctl --user list-timers cert-renewal
-      systemctl --user status cert-renewal.timer
-
-    @slack-homelab-alerts
-    {{/is_alert}}
-
-    {{#is_recovery}}
-    cert-renewal.timer is firing again on {{host.name}}.
-    {{/is_recovery}}
-  options:
-    thresholds:
-      critical: 1
-    notify_no_data: true
-    no_data_timeframe: 1440
-    notify_audit: false
-    renotify_interval: 1440
-  tags:
-    - service:cert-renewal
-    - env:production
-    - host:lunarBeacon
-  priority: 2
+# ─── Monitor 2: timer stale (missed runs / timer death) ──────────────────────
+# Deploy: POST https://api.datadoghq.com/api/v1/monitor
+# Update: PUT  https://api.datadoghq.com/api/v1/monitor/308823620
+#
+# Fires if the timer has not triggered in >26 hours.
+#
+# Payload:
+#   name: "LunarBeacon - cert-renewal.timer Stale"
+#   type: "metric alert"
+#   query: "max(last_26h):max:systemd.timer.last_trigger_usec{unit:cert-renewal.timer,host:lunarBeacon} < 1"
+#   message: |
+#     {{#is_alert}}
+#     cert-renewal.timer has not fired on {{host.name}} in over 26 hours.
+#
+#     The timer may be disabled or the unit may have failed to load.
+#
+#     Check:
+#       ssh lunarBeacon
+#       systemctl --user list-timers cert-renewal
+#       systemctl --user status cert-renewal.timer
+#
+#     @slack-homelab-alerts
+#     {{/is_alert}}
+#
+#     {{#is_recovery}}
+#     cert-renewal.timer is firing again on {{host.name}}.
+#     {{/is_recovery}}
+#   options:
+#     thresholds:
+#       critical: 1
+#     notify_no_data: true
+#     no_data_timeframe: 1440
+#     notify_audit: false
+#     renotify_interval: 1440
+#   tags:
+#     - service:cert-renewal
+#     - env:production
+#     - host:lunarBeacon
+#   priority: 2
