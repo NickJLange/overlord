@@ -23,4 +23,4 @@ resolvelib==1.0.1
 six==1.16.0
 soupsieve==2.9
 tzdata==2024.2
-urllib3==2.7.0
+urllib3==2.8.0
