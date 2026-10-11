@@ -63,16 +63,18 @@ build: _require-deploy-vars
 quadlet-install: _require-deploy-vars
 	@echo "Installing Quadlet units on $(DEPLOY_HOST) (rootless, user $(DEPLOY_USER))..."
 	ssh -A $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone https://github.com/NickJLange/overlord.git $(REPO_PATH)"
-	ssh -A $(DEPLOY_HOST) "git -C $(REPO_PATH) submodule update --init private-smart-home-ansible"
+	ssh -A $(DEPLOY_HOST) "git -C $(REPO_PATH) submodule update --init --recursive private-smart-home-ansible"
 	ssh $(DEPLOY_HOST) " \
 		mkdir -p ~/.config/containers/systemd ~/.config/systemd/user && \
 		REPO_PATH=$(REPO_PATH) DEPLOY_USER=$(DEPLOY_USER) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.container.tmpl \
 			> ~/.config/containers/systemd/cert-renewal.container && \
+		REPO_PATH=$(REPO_PATH) envsubst < $(DEPLOY_PATH)/systemd/cert-renewal.build.tmpl \
+			> ~/.config/containers/systemd/cert-renewal.build && \
 		cp $(DEPLOY_PATH)/systemd/cert-renewal.timer ~/.config/systemd/user/ && \
 		systemctl --user daemon-reload && \
 		systemctl --user enable --now cert-renewal.timer && \
 		loginctl enable-linger $(DEPLOY_USER)"
-	@echo "Quadlet installed. Build the image with 'make build', then scp secrets separately."
+	@echo "Quadlet installed (cert-renewal.build builds the image on each run). scp secrets separately."
 
 deploy-config: _require-deploy-vars
 	@echo "Deploying ansible config files to $(DEPLOY_HOST)..."

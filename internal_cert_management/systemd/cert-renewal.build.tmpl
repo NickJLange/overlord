@@ -1,0 +1,20 @@
+[Unit]
+Description=Build cert-renewal image
+
+# Rebuilt on every cert-renewal run (cached layers make this fast). This
+# recreates the image after a reboot or `podman system prune --all`, which
+# previously left cert-renewal.service failing with exit 125 trying to pull
+# localhost/.
+[Build]
+ImageTag=localhost/cert-renewal:latest
+File=${REPO_PATH}/internal_cert_management/Containerfile
+SetWorkingDirectory=${REPO_PATH}/internal_cert_management
+PodmanArgs=--build-arg LEGO_ARCH=amd64
+
+[Service]
+ExecStartPre=/usr/bin/git -C ${REPO_PATH} pull --ff-only
+# Nested role submodules (internal_dns_vault, udm-pro-configure) must be
+# checked out or the vault/endpoint playbooks silently do nothing.
+ExecStartPre=/usr/bin/git -C ${REPO_PATH} submodule update --init --recursive private-smart-home-ansible
+RemainAfterExit=no
+TimeoutStartSec=900
