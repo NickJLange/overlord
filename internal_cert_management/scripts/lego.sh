@@ -56,3 +56,26 @@ for subdomain in "${subdomains_rsa2048[@]}"; do
     echo "Processing rsa2048 cert for $subdomain"
     lego_cmd rsa2048 --domains "$subdomain"
 done
+
+# The Ansible roles (via files/certificates -> lego-data) and push_from_files.sh
+# expect lego-data/<domain>/<key-type>/<name>.{crt,key}, but lego writes a flat
+# lego-data/certificates/. Expose the nested layout as relative symlinks rather
+# than changing --path, which would force re-issuance of every cert.
+stage_cert() {
+    local domain="$1" key_type="$2" name="$3"
+    local dir="$LEGO_DATA_DIR/$domain/$key_type"
+    mkdir -p "$dir"
+    for ext in crt key issuer.crt; do
+        if [ -f "$LEGO_DATA_DIR/certificates/$name.$ext" ]; then
+            ln -sfn "../../certificates/$name.$ext" "$dir/$name.$ext"
+        fi
+    done
+}
+
+for subdomain in "${subdomains_ec256[@]}"; do
+    stage_cert "$subdomain" ec256 "_.$subdomain"
+done
+
+for subdomain in "${subdomains_rsa2048[@]}"; do
+    stage_cert "$subdomain" rsa2048 "$subdomain"
+done
