@@ -21,6 +21,9 @@ Environment=ANSIBLE_REMOTE_USER=${DEPLOY_USER}
 EnvironmentFile=${REPO_PATH}/internal_cert_management/.env
 EnvironmentFile=${REPO_PATH}/internal_cert_management/etc/lego_secrets.env
 WorkingDir=/app
+# Host networking: the push includes this host itself (certpush@<own IP>), which
+# rootless pasta networking cannot reach from inside the container.
+Network=host
 Exec=make all
 
 [Service]

@@ -23,6 +23,9 @@ fi
 : "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
 : "${VENV_PATH:?VENV_PATH is not set}"
 # LINUX_HOSTS_EXCLUDE — optional space-separated list of hosts to skip (e.g. "terraAlpha lunarBeacon")
+# CERT_PUSH_USER — SSH user for the push (default certpush). It owns /etc/letsencrypt
+#   on each endpoint (mkrasberry roles/cert-setup), so the push needs no sudo.
+CERT_PUSH_USER="${CERT_PUSH_USER:-certpush}"
 
 # Activate Python virtual environment if available (skipped inside container where packages are global)
 if [ -n "${VENV_PATH}" ] && [ -f "${VENV_PATH}/bin/activate" ]; then
@@ -93,6 +96,7 @@ do
         ansible-playbook \
             $EXTRA_VARS \
             --limit "$LIMIT" \
+            -e ansible_user="$CERT_PUSH_USER" \
             -e hostlist="${subdomain}_linux" \
             -e subdomain="${subdomain}.${DOMAIN_SUFFIX}" \
             -e vault_cert_algo="$type" \
