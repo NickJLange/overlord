@@ -1,7 +1,7 @@
 ansible==12.2.0
 ansible-core==2.19.11
 cffi==2.0.0
-certifi==2024.8.30
+certifi==2026.10.18
 charset-normalizer==3.4.0
 cryptography==50.0.0
 hvac==2.3.0
