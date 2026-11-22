@@ -56,7 +56,29 @@ scp etc/lego_secrets.env ${DEPLOY_HOST}:${REPO_PATH}/internal_cert_management/et
 ssh ${DEPLOY_HOST} systemctl --user list-timers cert-renewal
 ```
 
-The timer fires daily at 03:00, git-pulls the latest repo, and runs `make all` inside the container.
+The timer fires daily at 03:00. Before building, it fast-forwards the deployed
+checkout's tracking branch and initializes its pinned submodules recursively.
+The container bind-mounts that checkout and runs `make all`; unmerged feature
+branches and local edits on other machines are not deployed. `make quadlet-install`
+also updates the checkout before rendering its unit templates. Re-run that target
+after changes to the installed Quadlet units (a source pull alone does not update them).
+
+## Validation
+
+From this directory, run the isolated script/installation regressions and existing
+configuration checks without contacting production:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+bash tests/test-env-loading.sh
+```
+
+The Ansible submodule also provides `tests/test-cert-install-identity.sh` for a
+real Vault/controller/SSH-endpoint test using disposable Podman containers and
+generated certificates. Set `CONTROLLER_IMAGE` to an image built from this
+project's `Containerfile` (set `LEGO_ARCH=arm64` when building on ARM). The test
+covers administrative installation, direct `certpush` rotation without sudo,
+backups and service links, including an endpoint that cannot reach Vault.
 
 ## Manual Usage
 

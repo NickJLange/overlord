@@ -63,6 +63,7 @@ build: _require-deploy-vars
 quadlet-install: _require-deploy-vars
 	@echo "Installing Quadlet units on $(DEPLOY_HOST) (rootless, user $(DEPLOY_USER))..."
 	ssh -A $(DEPLOY_HOST) "[ -d $(REPO_PATH)/.git ] || git clone https://github.com/NickJLange/overlord.git $(REPO_PATH)"
+	ssh -A $(DEPLOY_HOST) "git -C $(REPO_PATH) pull --ff-only"
 	ssh -A $(DEPLOY_HOST) "git -C $(REPO_PATH) submodule update --init --recursive private-smart-home-ansible"
 	ssh $(DEPLOY_HOST) " \
 		mkdir -p ~/.config/containers/systemd ~/.config/systemd/user && \

@@ -61,13 +61,11 @@ fi
 
 # Fail loudly if a required role is an uninitialized submodule: an empty role
 # makes import_role a silent no-op and the playbook still reports success.
-for role in internal_dns_vault udm-pro-configure; do
-    if [ ! -d "$ANSIBLE_PATH/roles/$role/tasks" ]; then
-        echo "Error: Ansible role '$role' is missing or empty under $ANSIBLE_PATH/roles"
-        echo "       Run: git -C <overlord> submodule update --init --recursive private-smart-home-ansible"
-        exit 1
-    fi
-done
+if [ ! -s "$ANSIBLE_PATH/roles/internal_dns_vault/tasks/install_certs_vault.yml" ]; then
+    echo "Error: Ansible role 'internal_dns_vault' is missing its Vault upload tasks under $ANSIBLE_PATH/roles"
+    echo "       Run: git -C \"${REPO_PATH:-$ANSIBLE_PATH/..}\" submodule update --init --recursive private-smart-home-ansible"
+    exit 1
+fi
 
 echo "Uploading certificates to Vault for $HOSTLIST_VAULT..."
 if [ "$FORCE_SKIP_VALIDATION" = true ]; then

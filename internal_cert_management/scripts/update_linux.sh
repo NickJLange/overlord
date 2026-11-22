@@ -23,7 +23,7 @@ fi
 : "${ANSIBLE_INVENTORY:?ANSIBLE_INVENTORY is not set}"
 : "${VENV_PATH:?VENV_PATH is not set}"
 # LINUX_HOSTS_EXCLUDE — optional space-separated list of hosts to skip (e.g. "terraAlpha lunarBeacon")
-# CERT_PUSH_USER — SSH user for the push (default certpush). It owns /etc/letsencrypt
+# CERT_PUSH_USER — SSH user for the push (default certpush). It owns the certificate directory
 #   on each endpoint (mkrasberry roles/cert-setup), so the push needs no sudo.
 CERT_PUSH_USER="${CERT_PUSH_USER:-certpush}"
 
@@ -60,13 +60,11 @@ fi
 
 # Fail loudly if a required role is an uninitialized submodule: an empty role
 # makes import_role a silent no-op and the playbook still reports success.
-for role in internal_dns_vault; do
-    if [ ! -d "$ANSIBLE_PATH/roles/$role/tasks" ]; then
-        echo "Error: Ansible role '$role' is missing or empty under $ANSIBLE_PATH/roles"
-        echo "       Run: git -C <overlord> submodule update --init --recursive private-smart-home-ansible"
-        exit 1
-    fi
-done
+if [ ! -s "$ANSIBLE_PATH/roles/internal_dns_vault/tasks/install_certs_remote.yml" ]; then
+    echo "Error: Ansible role 'internal_dns_vault' is missing its endpoint install tasks under $ANSIBLE_PATH/roles"
+    echo "       Run: git -C \"${REPO_PATH:-$ANSIBLE_PATH/..}\" submodule update --init --recursive private-smart-home-ansible"
+    exit 1
+fi
 
 echo "Reading from Vault to push to Linux endpoints..."
 if [ "$FORCE_SKIP_VALIDATION" = true ]; then
