@@ -4,9 +4,14 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=localhost/cert-renewal:latest
+Image=cert-renewal.build
+Pull=never
 Volume=${REPO_PATH}/internal_cert_management:/app:z
 Volume=${REPO_PATH}/private-smart-home-ansible:/ansible:z
+# roles/internal_dns_vault/files/certificates is a symlink to
+# ../../../../internal_cert_management/lego-data, i.e. /internal_cert_management
+# when the ansible repo is mounted at /ansible.
+Volume=${REPO_PATH}/internal_cert_management:/internal_cert_management:z
 Volume=${REPO_PATH}/internal_cert_management/etc/ansible.cfg:/ansible/ansible.cfg:z
 Volume=${REPO_PATH}/internal_cert_management/etc/non_tasmota_hosts.inventory:/ansible/non_tasmota_hosts.inventory:z
 Volume=/home/${DEPLOY_USER}/.ssh/id_cert_push:/root/.ssh/id_cert_push:z,ro
@@ -16,11 +21,14 @@ Environment=ANSIBLE_REMOTE_USER=${DEPLOY_USER}
 EnvironmentFile=${REPO_PATH}/internal_cert_management/.env
 EnvironmentFile=${REPO_PATH}/internal_cert_management/etc/lego_secrets.env
 WorkingDir=/app
+# Host networking: the push includes this host itself (certpush@<own IP>), which
+# rootless pasta networking cannot reach from inside the container.
+Network=host
 Exec=make all
 
 [Service]
 Type=oneshot
-ExecStartPre=git -C ${REPO_PATH} pull --ff-only
+# git pull and image build happen in cert-renewal-build.service (cert-renewal.build)
 
 [Install]
 WantedBy=default.target

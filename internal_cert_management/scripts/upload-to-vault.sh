@@ -59,6 +59,14 @@ if [ ! -d "$ANSIBLE_PATH" ]; then
     exit 1
 fi
 
+# Fail loudly if a required role is an uninitialized submodule: an empty role
+# makes import_role a silent no-op and the playbook still reports success.
+if [ ! -s "$ANSIBLE_PATH/roles/internal_dns_vault/tasks/install_certs_vault.yml" ]; then
+    echo "Error: Ansible role 'internal_dns_vault' is missing its Vault upload tasks under $ANSIBLE_PATH/roles"
+    echo "       Run: git -C \"${REPO_PATH:-$ANSIBLE_PATH/..}\" submodule update --init --recursive private-smart-home-ansible"
+    exit 1
+fi
+
 echo "Uploading certificates to Vault for $HOSTLIST_VAULT..."
 if [ "$FORCE_SKIP_VALIDATION" = true ]; then
     echo "⚠️  Certificate validation is DISABLED (--force)"

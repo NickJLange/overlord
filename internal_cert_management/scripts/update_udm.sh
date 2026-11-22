@@ -50,11 +50,6 @@ done
 read -ra subdomains <<< "$SUBDOMAINS_ENDPOINTS"
 read -ra excludes <<< "${SUBDOMAINS_UDM_EXCLUDE:-}"
 
-if [ ! -d "$ANSIBLE_PATH" ]; then
-    echo "Error: Ansible path not found: $ANSIBLE_PATH"
-    exit 1
-fi
-
 echo "Reading from Vault to push to UDM devices..."
 if [ "$FORCE_SKIP_VALIDATION" = true ]; then
     echo "⚠️  Certificate validation is DISABLED (--force)"
@@ -84,6 +79,14 @@ do
     if is_excluded "$subdomain"; then
         echo "Skipping UDM for $subdomain (excluded via SUBDOMAINS_UDM_EXCLUDE)"
         continue
+    fi
+
+    # Excluded sites need no Ansible checkout. Active targets require the actual
+    # role entrypoint, not merely an empty tasks directory.
+    if [ ! -s "$ANSIBLE_PATH/roles/udm-pro-configure/tasks/main.yml" ]; then
+        echo "Error: Ansible role 'udm-pro-configure' is missing its main tasks under $ANSIBLE_PATH/roles"
+        echo "       Run: git -C \"${REPO_PATH:-$ANSIBLE_PATH/..}\" submodule update --init --recursive private-smart-home-ansible"
+        exit 1
     fi
 
     cd "$ANSIBLE_PATH" || exit 1

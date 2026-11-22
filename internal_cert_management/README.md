@@ -56,7 +56,48 @@ scp etc/lego_secrets.env ${DEPLOY_HOST}:${REPO_PATH}/internal_cert_management/et
 ssh ${DEPLOY_HOST} systemctl --user list-timers cert-renewal
 ```
 
-The timer fires daily at 03:00, git-pulls the latest repo, and runs `make all` inside the container.
+The timer is scheduled daily at 03:00 with a randomized delay of up to 30 minutes.
+Before building, it fast-forwards the deployed checkout's current branch from its
+configured upstream, then initializes `private-smart-home-ansible` and its nested
+submodules at the revisions pinned by their parents. Those revisions can include
+unmerged feature-branch commits; other branch tips and edits on other machines
+are not automatically copied to the deployed checkout.
+
+The container bind-mounts that checkout and runs `make all`. Neither the timer nor
+`make quadlet-install` enforces a branch or a clean worktree: non-conflicting local
+edits can survive `git pull --ff-only` and be used by the container. Keep the deployed
+checkout on the intended production branch and inspect local source changes before
+running it. No automatic reset discards local edits.
+
+`make quadlet-install` also updates the checkout before rendering its unit templates.
+Re-run that target after changes to the installed Quadlet units (a source pull alone
+does not update them).
+
+## Validation
+
+From this directory, run the isolated script/installation regressions and existing
+configuration checks without contacting production:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+bash tests/test-env-loading.sh
+```
+
+The Ansible submodule also provides `tests/test-cert-install-identity.sh` for a
+real Vault/controller/SSH-endpoint test using disposable Podman containers and
+generated certificates. For a local ARM validation run, build the controller from
+this directory and run the test from the repository root:
+
+```bash
+podman build --build-arg LEGO_ARCH=arm64 -t localhost/cert-renewal-test .
+(cd .. && CONTROLLER_IMAGE=localhost/cert-renewal-test bash private-smart-home-ansible/tests/test-cert-install-identity.sh)
+```
+
+Use `--build-arg LEGO_ARCH=amd64` for an x86-64 controller. The remote deployment
+`make build` target and installed Quadlet build unit explicitly target `amd64`;
+setting a shell variable alone does not override their build arguments. The test
+covers administrative installation, direct `certpush` rotation without sudo,
+backups and service links, including an endpoint that cannot reach Vault.
 
 ## Manual Usage
 
