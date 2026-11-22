@@ -111,8 +111,24 @@ case " $* " in *" --limit east_linux:!excluded-host "*|*" --limit west_linux:!ex
     def test_vault_upload_needs_only_its_own_role_even_for_udm_secrets(self):
         self.task("internal_dns_vault", "install_certs_vault.yml")
         self.config(SUBDOMAINS_VAULT_UDM="router.west.example.test", CERT_TYPES_VAULT_UDM="rsa2048")
+        calls = self.root / "playbook-args"
+        self.executable("ansible-playbook", '''
+printf '%s\\n' "$*" >> "$PLAYBOOK_ARGS"
+case " $* " in
+    *" -e subdomain=router.west.example.test "*) exit "${UDM_PLAYBOOK_STATUS:-0}" ;;
+    *) exit "${PLAYBOOK_STATUS:-0}" ;;
+esac
+''')
+        self.env["PLAYBOOK_ARGS"] = str(calls)
         self.run_script("upload-to-vault.sh")
+        invocations = calls.read_text().splitlines()
+        self.assertEqual(len(invocations), 2)
+        udm_call, = [args for args in invocations if "subdomain=router.west.example.test" in args]
+        self.assertIn("-e vault_cert_algo=rsa2048", udm_call)
+        self.assertTrue(udm_call.endswith("playbooks/internal_certs_update_vault.yml"))
+        # An ordinary upload failure and a UDM-only failure must both fail the job.
         self.run_script("upload-to-vault.sh", status=1, PLAYBOOK_STATUS="2")
+        self.run_script("upload-to-vault.sh", status=1, UDM_PLAYBOOK_STATUS="2")
         (self.ansible / "roles/internal_dns_vault/tasks/install_certs_vault.yml").unlink()
         self.run_script("upload-to-vault.sh", status=1)
 
@@ -183,6 +199,12 @@ case " $* " in *" --limit east_linux:!excluded-host "*|*" --limit west_linux:!ex
         child.mkdir()
         self.git("init", "-b", "master", cwd=child)
         (child / "initialized").write_text("submodule content")
+        nested = self.root / "nested-role"
+        nested.mkdir()
+        self.git("init", "-b", "master", cwd=nested)
+        (nested / "initialized").write_text("nested role content")
+        self.commit(nested, "role")
+        self.git("submodule", "add", str(nested), "roles/internal_dns_vault", cwd=child)
         self.commit(child, "child")
         self.git("submodule", "add", str(child), "private-smart-home-ansible", cwd=remote)
         self.commit(remote, "old deployment")
@@ -209,6 +231,7 @@ case " $* " in *" --limit east_linux:!excluded-host "*|*" --limit west_linux:!ex
                 unit = home / ".config/containers/systemd/cert-renewal.build"
                 self.assertIn(f"File={checkout}/internal_cert_management/Containerfile", unit.read_text())
                 self.assertEqual((checkout / "private-smart-home-ansible/initialized").read_text(), "submodule content")
+                self.assertEqual((checkout / "private-smart-home-ansible/roles/internal_dns_vault/initialized").read_text(), "nested role content")
                 self.assertEqual(self.git("rev-parse", "HEAD", cwd=checkout),
                                  self.git("rev-parse", "HEAD", cwd=remote))
 
